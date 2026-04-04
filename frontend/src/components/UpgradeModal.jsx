@@ -14,7 +14,7 @@ export default function UpgradeModal({ onClose, user, downloadsUsed }) {
     {
       id: "professional",
       name: "Professional",
-      price: "£6.99",
+      price: "£5",
       period: "/month",
       features: [
         "Unlimited downloads",
@@ -28,7 +28,7 @@ export default function UpgradeModal({ onClose, user, downloadsUsed }) {
     {
       id: "enterprise",
       name: "Enterprise",
-      price: "£59.99",
+      price: "£49.90",
       period: "/month",
       features: [
         "Everything in Professional",

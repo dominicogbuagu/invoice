@@ -1,188 +1,130 @@
-<analysis>original_problem_statement:
-The user wants to build a full-stack SaaS invoicing platform called Realtouch Invoice.
+<analysis>**original_problem_statement**: 
+**PRODUCT REQUIREMENTS:** Build a full-stack SaaS invoicing platform called Realtouch Invoice. 
+Features require a high-converting landing page, complete dashboard for invoice management (CRUD), customizable tax rates per invoice, editable 'From' section, logo upload for generated PDFs, and a permanent limit of 5 downloads for free starter plan users (unlimited for paid/owners). 
+Payments to be integrated via Stripe, PayPal, and Google Pay for plan upgrades (Starter: Free, Professional: £6.99/month, Enterprise: £59.99/month). 
+Requires both Email/Password custom authentication and Emergent-managed Google OAuth. A special owner admin role bypassing all restrictions must be present. Code must be continuously synced to the user's GitHub repository.
 
-**Phase 1 - Initial Requirements:**
--   A high-converting landing page.
--   A complete dashboard for invoice management (CRUD).
--   **Customizable Tax Rate Per Invoice**: Each invoice must have a user-definable tax rate (0-100%), with tax auto-calculated.
--   **Permanent Download Limit**: A strict, non-resetting limit of 5 total downloads for free 'starter' plan users. After 5 downloads, the user is permanently blocked and must upgrade. The counter only resets upon upgrading to a paid plan.
--   **Payment Integration**: Stripe, PayPal, and Google Pay for plan upgrades (Professional: £8.99/month, Enterprise: £59.99/month).
--   Full CRUD for all document types (invoices, receipts, etc.).
--   **Tech Stack Change**: User initially specified Node.js/Express/SQLite but approved a switch to FastAPI/MongoDB.
+**User's preferred language**: English (INSTRUCT next agent to respond in the user's preferred language only)
 
-**Phase 2 - Enhancement Requests:**
--   **Editable 'From' Section**: Users should be able to input their own company details in the 'From' section of the invoice.
--   **Logo Upload**: Users should be able to upload their company logo to be displayed on invoices.
--   **PDF Template Update**: The generated PDF should have a blue header/shade at the top, as per the user's screenshot.
--   **Email Integration**: Implement email delivery for invoices (using Resend) and send verification emails upon signup.
--   **Additional Payment Methods**: Explicitly add PayPal and Google Pay.
--   **Recurring Invoices**: Add a feature for setting up recurring invoices.
--   **PDF Template Customization**: Allow users to customize PDF templates.
--   **Owner/Admin Account**: Create a special user role with unlimited access, bypassing all restrictions like download limits.
--   **Push to GitHub**: The final code should be pushed to the user's GitHub repository.
+**what currently exists?** 
+A FastAPI backend and React frontend application utilizing MongoDB. It features a custom landing page, dashboard, and login page supporting both standard Email/Password authentication and Google OAuth. Full CRUD exists for invoices and customers. A permanent 5-download limit is strictly enforced for free users. PDF generation is built via ReportLab, successfully displaying user-uploaded logos and custom blue headers. The app sends emails via Resend and uses Stripe for checkout sessions. All latest code has been successfully pushed to the user's provided GitHub repository.
 
-**Phase 3 - UI/UX Refinements:**
--   **Comprehensive Dashboard**: The first view after login should be a dashboard summary with key stats, recent activity, and quick actions, as shown in a screenshot.
--   **Custom Login Page**: The login page should be visually appealing, feature Realtouch branding prominently, and remove any emergent branding.
--   **Comprehensive README**: Create a detailed README file for the project.
--   **Push Updates to GitHub**: Push all the new changes to the user's repository.
+**Last working item**: 
+- Last item agent was working: Changing the Professional plan price from £8.99 to £6.99 across the backend () and frontend (, ), followed by pushing the updates to GitHub.
+- Status: USER VERIFICATION PENDING
+- Agent Testing Done: Y
+- Which testing method agent to use? screenshot tool
+- User Testing Done: N
 
-**User's preferred language**: English
+**All Pending/In progress Issue list**: 
+  Issue 1: Google OAuth Consent Screen displays incorrect App Name (P1)
+  
+  Issues Detail:
+  - Issue 1: 
+     - Attempted fixes: Agent consulted the  regarding the OAuth name showing as Realpay Invoice instead of Realtouch Invoice. The support agent confirmed this is controlled by the Emergent platform's global managed OAuth configuration, not the application codebase. 
+     - Next debug checklist: Ask user if they wish to implement a Custom Google OAuth integration to gain full branding control over the consent screen, or if they are okay with ignoring the Emergent-managed naming constraint.
+     - Why fix this issue and what will be achieved with the fix? Ensures brand consistency (Realtouch Invoice) for users authenticating via Google.
+     - Status: BLOCKED (On user decision for custom OAuth vs managed)
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix: Both
+     - Blocked on other issue: Emergent platform configuration constraint
 
-**what currently exists?**
-A full-stack invoicing application built with a FastAPI backend and a React frontend, using MongoDB as the database.
-The application includes:
-- A landing page, custom login page, and a dashboard.
-- Google OAuth authentication managed by Emergent, plus a special owner role with unlimited access.
-- Full CRUD functionality for invoices and customers.
-- The critical permanent 5 download limit for free users.
-- Stripe integration for handling plan upgrades, with UI for PayPal and Google Pay.
-- Features for a custom 'From' address, logo uploads, and emailing invoices via Resend.
-- A custom dashboard homepage displaying key statistics.
-- The code has been pushed to the user's GitHub repository previously.
-
-**Last working item**:
--   **Last item agent was working**: Fixing the styling of the logo on the custom login page. The agent identified via a screenshot that the logo was appearing as a white square, likely due to a CSS  property () that needs to be removed or corrected.
--   **Status**: IN PROGRESS
--   **Agent Testing Done**: N
--   **Which testing method agent to use?**: screenshot tool
--   **User Testing Done**: N
-
-**All Pending/In progress Issue list**:
--   **Issue 1**: Logo on the custom login page is not rendering correctly. (Priority: P0)
-
-    -   **Issue Detail**:
-        -   **Attempted fixes**: None yet. The issue was just identified.
-        -   **Next debug checklist**:
-            1.  View the file .
-            2.  Locate the  tag for the logo.
-            3.  Remove the  and  Tailwind CSS classes from the logo's class list.
-            4.  Take a screenshot of the  page to verify the fix.
-        -   **Why fix this issue and what will be achieved with the fix?**: To ensure the company's branding is displayed correctly on the login page, which is crucial for user trust and a professional appearance.
-        -   **Status**: NOT STARTED
-        -   **Is recurring issue?**: N
-        -   **Should Test frontend/backend/both after fix?**: Frontend
-        -   **Blocked on other issue**: None
-
-**In progress Task List**:
--   **Task 1**: Refine UI and push final updates to GitHub.
-    -   **Where to resume**: Fix the logo styling on .
-    -   **What will be achieved with this?**: A polished, professionally branded application that meets all of the user's latest UI/UX requests.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on something**: Finishing the login page fix.
+**In progress Task List**: 
+None.
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks**:
-    1.  **Push to GitHub (P0)**: After fixing the login page and verifying all recent changes, commit and push the updated application to the user's GitHub repository.
-    2.  **Implement Recurring Invoices (P1)**: This feature was requested but has not been started. It will require:
-        -   Backend: New DB schema/fields, API endpoints, and a scheduling mechanism (e.g., cron job) to automatically generate invoices.
-        -   Frontend: UI for users to create, view, and manage recurring invoice schedules.
-    3.  **Implement PDF Template Customization (P1)**: This feature was requested but has not been started. It would involve allowing users to select different PDF layouts or customize colors.
+  Upcoming Tasks:
+  - Task 1: Implement Recurring Invoices (P1) - Requires Backend DB schema/cron job implementation and frontend UI to allow users to schedule weekly, monthly, or yearly automatic invoice generation.
+  - Task 2: Implement PDF Template Customization (P1) - Allow users to select different PDF layouts or customize colors for their generated invoices.
 
--   **Future Tasks**: None
+  Future Tasks:
+  - None specified.
 
 **Completed work in this session**
--   **Recently completed**:
-    -   Owner/Admin account with unlimited privileges (DONE)
-    -   Comprehensive Dashboard homepage with stats and charts (DONE)
-    -   Custom branded Login page (DONE, pending logo fix)
-    -   Comprehensive  file (DONE)
-    -   Editable 'From' section for invoices (DONE)
-    -   Company logo upload and display on invoices (DONE)
-    -   Email delivery for invoices via Resend (DONE)
-    -   Initial code push to GitHub (DONE)
+- Added Email/Password Signup and Login endpoints to backend () (DONE)
+- Replaced login page title text with the user's uploaded Realtouch Invoice logo and added Email/Password UI forms () (DONE)
+- Fixed  serialization bug in the new signup API endpoint (DONE)
+- Fixed frontend fetch bug (double stream read error due to calling  before ) (DONE)
+- Fixed ReportLab PDF generation to correctly render user-uploaded logos using  () (DONE)
+- Updated Professional plan price from £8.99 to £6.99 (, , ) (DONE)
+- Pushed all sequential updates to the user's GitHub repository  (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-None. The agent has addressed all identified issues.
+None.
 
 **Known issue recurrence from previous fork**
-None.
+- None
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend**: Python (FastAPI)
--   **Frontend**: JavaScript (React)
--   **Database**: MongoDB
--   **Authentication**: JWT, Google OAuth (via Emergent-managed integration), custom owner role.
--   **Payments**: Stripe (for credit card and Google Pay), PayPal UI.
--   **Email**: Resend API for transactional emails.
--   **File Generation**:  for PDFs.
--   **Styling**: Tailwind CSS, Shadcn/UI components.
+- Frontend: React.js, Tailwind CSS, Shadcn UI
+- Backend: FastAPI, Python
+- Database: MongoDB
+- Authentication: Custom JWT (Email/Password) + Emergent-managed Google OAuth
+- PDF Generation: 
+- Payments: Stripe
+- Emails: Resend API
 
 **key DB schema**
--   **users**: 
--   **invoices**: 
--   **customers**: 
--   **downloads**: 
+- users: 
+- invoices: 
+- customers: 
+- downloads: 
 
 **changes in tech stack**
--   The project was migrated from the user's initial request of Node.js/Express/SQLite to **Python/FastAPI/MongoDB** based on user preference and agent recommendation.
+- None
 
 **All files of reference**
--   : The core FastAPI application containing all API logic.
--   : The main dashboard component, which orchestrates most of the user-facing functionality.
--   : The new custom login page that needs a styling fix.
--   : The new summary view shown after login.
--   : Component for creating and editing invoices.
--   : The newly created comprehensive documentation for the project.
+- : Contains core backend logic, newly added email/password auth routes, updated PDF generation (), and Stripe pricing metadata.
+- : Contains the UI for both Auth flows (Google + Custom) and the newly integrated brand logo.
+-  & : Updated to reflect the £6.99 Professional tier price.
 
-**Areas that need refactoring**:
-None at this moment.
+**Areas that need refactoring**: 
+- None identified. Code is clean and modular.
 
 **key api endpoints**
--   : Initiates Google OAuth flow.
--   : Handles the OAuth callback.
--   : Gets the current user's profile.
--   : Retrieves dashboard statistics.
--   : CRUD operations for invoices.
--   : Downloads an invoice, enforces download limits.
--   : Sends an invoice via email.
--   : Creates a Stripe payment session.
--   : Manages user profile updates, including company details and logo.
+-  (POST) - New email/pwd registration
+-  (POST) - New email/pwd login
+-  &  - OAuth flow
+-  (GET) - Serves generated PDF with limits
+-  (POST) - Payment session
 
 **Critical Info for New Agent**
--   The user has an **owner** account type () that bypasses all restrictions, including the download limit. The owner email is hardcoded in  and should be parameterized if needed.
--   The tech stack is **FastAPI + React + MongoDB**, not the one from the original prompt.
--   Authentication is handled via **Emergent-managed Google OAuth**. A custom login page () was created that redirects to the OAuth flow.
--   The next immediate step is to **fix the logo on the login page** and then **push all recent updates** to the user's GitHub repository.
--   Features like **recurring invoices** and **PDF template customization** have been requested but are not yet implemented.
+- **Dual Authentication**: The system now supports BOTH Email/Password and Google OAuth login pathways. Ensure any future user object updates account for both auth methods.
+- **GitHub Sync**: The agent has successfully configured git and pushed code multiple times to . **ALWAYS commit and push your completed features/fixes** to this remote repository as per the user's ongoing instructions.
+- **PDF Logo Rendering**: When modifying PDF generation in , be aware that  requires HTTP-fetched images to be wrapped via  before invoking .
 
-**documents and test_reports created in this job**
--   
--   
--   
--   
--   
+**documents and test reports created in this job**
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  
-2.  
-3.  
-4.  
-5.  
+1. (User) Request to add Email/Password signup option, replace text with uploaded Realtouch Invoice logo on login page, and push to GitHub. (COMPLETED)
+2. (User) Reported signup error () and noted Google OAuth page says Realpay Invoice instead of Realtouch Invoice. Requested fixes and push to GitHub. (COMPLETED - fetch bug fixed. Support agent clarified OAuth name is platform-controlled).
+3. (User) Uploaded screenshot of a completely different app () asking about payslips and requested a comprehensive summary of the current invoice solution. (COMPLETED - provided summary).
+4. (User) Clarified the previous screenshot was a mistake and to disregard it. (ACKNOWLEDGED)
+5. (User) Asked how to deploy the application to a custom subdomain . (COMPLETED - provided deployment instructions).
+6. (User) Requested to change the cost for the professional plan to £6.99. (COMPLETED)
 
 **Project Health Check:**
--   **Broken**: The logo on the custom login page is broken.
--   **Mocked**: Payment processing is mocked (uses test keys and Stripe checkout URL is generated, but no real payment is processed in the test flow). Email sending relies on a  which is likely a placeholder.
+- Broken: Emergent Google OAuth consent screen displays Realpay instead of Realtouch (Platform constraint, requires custom OAuth if user insists).
+- Mocked: Stripe integration uses test keys. Resend uses a placeholder/test API key.
 
 **3rd Party Integrations**
--   **Google OAuth (via Emergent)**: Used for user authentication.
--   **Stripe**: Used for payment processing. A test key is used.
--   **Resend**: Used for sending invoice and verification emails. Requires a user-provided API key.
+- Emergent-managed Google OAuth (Auth) - Uses platform configuration.
+- Stripe (Payments) - Requires User API Key (test key currently utilized)
+- Resend (Emails) - Requires User API Key
 
 **Testing status**
--   **Testing agent used after significant changes**: YES
--   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None
--   **Known regressions**: None
+- Testing agent used after significant changes: YES ()
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: None
+- Known regressions: None
 
 **Credentials to test flow:**
--   An owner account can be created for testing unlimited access. The email  is configured in  to automatically grant owner privileges. The agent used  for testing.
+- Admin/Owner bypass account: Create an account using  to automatically trigger unrestricted  access.
+- Standard accounts can now be freely created using the UI signup form.
 
 **What agent forgot to execute**
--   **Recurring Invoices**: Requested by the user but not implemented.
--   **PDF Template Customization**: Requested by the user but not implemented.
--   **Final GitHub Push**: The latest changes (dashboard, login page, README) have not been pushed to the user's repository yet.</analysis>
+- The Recurring Invoices and PDF Template Customization features originally requested in Phase 2 have not been started yet. Focus on these next.</analysis>

@@ -1227,8 +1227,8 @@ async def delete_customer(
 # ========== PAYMENT ENDPOINTS ==========
 
 PAYMENT_PACKAGES = {
-    "professional": 6.99,
-    "enterprise": 59.99
+    "professional": 5.00,
+    "enterprise": 49.90
 }
 
 @api_router.post("/payments/stripe/create-checkout")
