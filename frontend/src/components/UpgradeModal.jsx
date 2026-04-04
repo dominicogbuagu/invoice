@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Check, CreditCard, AlertCircle, Lock } from "lucide-react";
+import { X, Check, CreditCard, AlertCircle, Lock, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -130,10 +130,10 @@ export default function UpgradeModal({ onClose, user, downloadsUsed }) {
           {/* Payment Method */}
           <div className="mb-6">
             <h3 className="font-semibold text-slate-900 mb-3">Select Payment Method:</h3>
-            <div className="flex gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => setPaymentMethod("card")}
-                className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                className={`p-4 rounded-lg border-2 transition-all ${
                   paymentMethod === "card" 
                     ? "border-[#0066cc] bg-blue-50" 
                     : "border-slate-200 hover:border-slate-300"
@@ -145,8 +145,21 @@ export default function UpgradeModal({ onClose, user, downloadsUsed }) {
                 <p className="text-xs text-slate-500">via Stripe</p>
               </button>
               <button
+                onClick={() => setPaymentMethod("bacs_debit")}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  paymentMethod === "bacs_debit" 
+                    ? "border-[#0066cc] bg-blue-50" 
+                    : "border-slate-200 hover:border-slate-300"
+                }`}
+                data-testid="payment-method-direct-debit"
+              >
+                <Building2 className="w-6 h-6 mx-auto mb-2 text-[#0066cc]" />
+                <p className="text-sm font-medium">Direct Debit</p>
+                <p className="text-xs text-slate-500">UK BACS</p>
+              </button>
+              <button
                 onClick={() => setPaymentMethod("google_pay")}
-                className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                className={`p-4 rounded-lg border-2 transition-all ${
                   paymentMethod === "google_pay" 
                     ? "border-[#0066cc] bg-blue-50" 
                     : "border-slate-200 hover:border-slate-300"
@@ -163,20 +176,6 @@ export default function UpgradeModal({ onClose, user, downloadsUsed }) {
                 </div>
                 <p className="text-sm font-medium">Google Pay</p>
                 <p className="text-xs text-slate-500">Fast checkout</p>
-              </button>
-              <button
-                onClick={() => setPaymentMethod("paypal")}
-                className={`flex-1 p-4 rounded-lg border-2 transition-all opacity-60 cursor-not-allowed ${
-                  paymentMethod === "paypal" 
-                    ? "border-[#0066cc] bg-blue-50" 
-                    : "border-slate-200"
-                }`}
-                disabled
-                data-testid="payment-method-paypal"
-              >
-                <div className="w-6 h-6 mx-auto mb-2 bg-[#003087] rounded text-white text-xs flex items-center justify-center font-bold">P</div>
-                <p className="text-sm font-medium text-slate-400">PayPal</p>
-                <p className="text-xs text-slate-400">Coming soon</p>
               </button>
             </div>
           </div>
@@ -233,6 +232,7 @@ export default function UpgradeModal({ onClose, user, downloadsUsed }) {
             ) : (
               <>
                 Upgrade to {selectedPlan === "professional" ? "Professional" : "Enterprise"}
+                {paymentMethod === "bacs_debit" && " via Direct Debit"}
               </>
             )}
           </Button>

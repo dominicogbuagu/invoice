@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/sonner";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
 import AuthCallback from "@/pages/AuthCallback";
@@ -9,6 +10,7 @@ import PaymentSuccess from "@/pages/PaymentSuccess";
 import LoginPage from "@/pages/LoginPage";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
 // Auth context provider
 export const useAuth = () => {
@@ -128,12 +130,14 @@ function AppRouter() {
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <AppRouter />
-        <Toaster position="top-right" />
-      </BrowserRouter>
-    </div>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <div className="App">
+        <BrowserRouter>
+          <AppRouter />
+          <Toaster position="top-right" />
+        </BrowserRouter>
+      </div>
+    </GoogleOAuthProvider>
   );
 }
 

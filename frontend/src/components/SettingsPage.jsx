@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Upload, X, Save, Building2, Mail, Phone, Globe, Image } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Upload, X, Save, Building2, Mail, Phone, Globe, Image, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,9 +8,18 @@ import { toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
+const PDF_TEMPLATES = {
+  classic: { name: "Classic Blue", header_color: "#0066cc", accent_color: "#0052a3" },
+  modern: { name: "Modern Dark", header_color: "#1e293b", accent_color: "#3b82f6" },
+  minimal: { name: "Minimal Grey", header_color: "#64748b", accent_color: "#475569" },
+  emerald: { name: "Emerald Green", header_color: "#059669", accent_color: "#047857" },
+  crimson: { name: "Crimson Red", header_color: "#dc2626", accent_color: "#b91c1c" }
+};
+
 export default function SettingsPage({ user, setUser, onUpgrade }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(user?.pdf_template || "classic");
   const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
@@ -308,6 +317,51 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
             </>
           )}
         </Button>
+      </div>
+
+      {/* PDF Template Customization */}
+      <div className="card p-6 mb-6">
+        <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+          <Palette className="w-5 h-5 text-[#0066cc]" />
+          PDF Template
+        </h3>
+        <p className="text-sm text-slate-500 mb-4">Choose a color theme for your generated PDF invoices.</p>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {Object.entries(PDF_TEMPLATES).map(([id, template]) => (
+            <button
+              key={id}
+              onClick={async () => {
+                setSelectedTemplate(id);
+                try {
+                  const res = await fetch(`${BACKEND_URL}/api/user/pdf-template`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ template_id: id })
+                  });
+                  if (res.ok) {
+                    setUser({ ...user, pdf_template: id });
+                    toast.success(`Template set to ${template.name}`);
+                  }
+                } catch (err) {
+                  toast.error("Failed to update template");
+                }
+              }}
+              className={`p-3 rounded-lg border-2 transition-all text-center ${
+                selectedTemplate === id
+                  ? "border-[#0066cc] ring-2 ring-blue-100"
+                  : "border-slate-200 hover:border-slate-300"
+              }`}
+              data-testid={`template-${id}`}
+            >
+              <div className="flex gap-1 justify-center mb-2">
+                <div className="w-6 h-6 rounded" style={{ backgroundColor: template.header_color }}></div>
+                <div className="w-6 h-6 rounded" style={{ backgroundColor: template.accent_color }}></div>
+              </div>
+              <p className="text-xs font-medium text-slate-700">{template.name}</p>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Subscription */}

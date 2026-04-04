@@ -39,6 +39,8 @@ STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', 'sk_test_emergent')
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 OWNER_EMAIL = os.environ.get('OWNER_EMAIL', '')  # Product owner email - gets unlimited access
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 
 # Initialize Resend
 if RESEND_API_KEY:
@@ -224,10 +226,10 @@ class Customer(BaseModel):
     address: Optional[str] = None
     created_at: datetime
 
-class PaymentRequest(BaseModel):
+class SubscriptionPaymentRequest(BaseModel):
     plan: str
     origin_url: str
-    payment_method: str = "card"  # card, paypal, google_pay
+    payment_method: str = "card"  # card, bacs_debit, google_pay
 
 class ProfileUpdate(BaseModel):
     name: Optional[str] = None
@@ -415,21 +417,27 @@ async def send_invoice_email(invoice: dict, recipient_email: str, pdf_bytes: byt
 # ========== PDF GENERATION ==========
 
 def generate_invoice_pdf(invoice: dict, user: dict = None) -> BytesIO:
-    """Generate professional PDF with blue header and user logo"""
+    """Generate professional PDF with customizable template colors and user logo"""
     from reportlab.lib.utils import ImageReader
     
     buffer = BytesIO()
+    
+    # Get template colors
+    template_id = (user or {}).get("pdf_template", "classic")
+    template = PDF_TEMPLATES.get(template_id, PDF_TEMPLATES["classic"])
+    header_color = colors.HexColor(template["header_color"])
+    accent_color = colors.HexColor(template["accent_color"])
     
     # Create PDF with custom canvas
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    # Blue header bar at top
-    c.setFillColor(colors.HexColor('#0066cc'))
+    # Header bar at top
+    c.setFillColor(header_color)
     c.rect(0, height - 60, width, 60, fill=True, stroke=False)
     
-    # Blue footer bar at bottom
-    c.setFillColor(colors.HexColor('#0066cc'))
+    # Footer bar at bottom
+    c.setFillColor(header_color)
     c.rect(0, 0, width, 30, fill=True, stroke=False)
     
     # Company logo (if available) - positioned in top right
@@ -450,7 +458,6 @@ def generate_invoice_pdf(invoice: dict, user: dict = None) -> BytesIO:
             logo_buffer = BytesIO(logo_data)
             logo_image = ImageReader(logo_buffer)
             c.drawImage(logo_image, logo_x, logo_y, width=70, height=70, preserveAspectRatio=True, mask='auto')
-            logo_drawn = True
             logger.info("Logo successfully added to PDF")
         except Exception as e:
             logger.error(f"Failed to add logo to PDF: {str(e)}")
@@ -487,7 +494,7 @@ def generate_invoice_pdf(invoice: dict, user: dict = None) -> BytesIO:
     if tagline:
         y_pos -= 18
         c.setFont("Helvetica-Oblique", 9)
-        c.setFillColor(colors.HexColor('#0066cc'))
+        c.setFillColor(accent_color)
         c.drawString(50, y_pos, tagline)
     
     # Horizontal line
@@ -540,7 +547,7 @@ def generate_invoice_pdf(invoice: dict, user: dict = None) -> BytesIO:
     c.setFont("Helvetica-Bold", 16)
     c.drawString(50, y_pos, "Invoice Total")
     c.setFont("Helvetica-Bold", 24)
-    c.setFillColor(colors.HexColor('#0066cc'))
+    c.setFillColor(accent_color)
     c.drawRightString(width - 50, y_pos, f"£{invoice['total']:.2f}")
     
     y_pos -= 25
@@ -713,6 +720,103 @@ async def get_me(user: dict = Depends(get_current_user)):
     user["is_owner"] = is_owner(user)
     user["effective_plan"] = get_effective_plan(user)
     return user
+
+# ========== CUSTOM GOOGLE OAUTH ENDPOINT ==========
+# REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+
+class GoogleCredentialRequest(BaseModel):
+    credential: str
+
+@api_router.post("/auth/google")
+async def google_oauth_login(request_body: GoogleCredentialRequest, response: Response):
+    """Verify Google ID token and create/login user"""
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            request_body.credential,
+            google_requests.Request(),
+            GOOGLE_CLIENT_ID
+        )
+
+        email = idinfo.get('email', '').lower()
+        name = idinfo.get('name', 'User')
+        picture = idinfo.get('picture')
+
+        if not email:
+            raise HTTPException(status_code=400, detail="No email in Google token")
+
+    except ValueError as e:
+        logger.error(f"Google token verification failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+
+    # Check if user exists
+    user_doc = await db.users.find_one({"email": email}, {"_id": 0})
+
+    is_new_user = False
+    if user_doc:
+        await db.users.update_one(
+            {"email": email},
+            {"$set": {
+                "name": name,
+                "picture": picture
+            }}
+        )
+        user_id = user_doc["user_id"]
+    else:
+        is_new_user = True
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        new_user = {
+            "user_id": user_id,
+            "email": email,
+            "name": name,
+            "picture": picture,
+            "plan": "starter",
+            "download_count": 0,
+            "email_verified": True,
+            "auth_provider": "google",
+            "company_details": {
+                "name": "Realtouch Global Ventures Ltd",
+                "trading_name": None,
+                "registration_number": "16578193",
+                "address": None,
+                "tagline": None
+            },
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(new_user)
+
+    # Create session
+    session_token = f"sess_{uuid.uuid4().hex}"
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+
+    await db.user_sessions.delete_many({"user_id": user_id})
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
+
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    user_doc["is_owner"] = is_owner(user_doc)
+    user_doc["effective_plan"] = get_effective_plan(user_doc)
+
+    if is_new_user:
+        asyncio.create_task(send_verification_email(email, name))
+
+    return {"user": user_doc, "session_token": session_token}
 
 @api_router.post("/auth/logout")
 async def logout(request: Request, response: Response):
@@ -1233,10 +1337,10 @@ PAYMENT_PACKAGES = {
 
 @api_router.post("/payments/stripe/create-checkout")
 async def create_stripe_checkout(
-    payment: PaymentRequest,
+    payment: SubscriptionPaymentRequest,
     user: dict = Depends(get_current_user)
 ):
-    """Create Stripe checkout session with multiple payment methods"""
+    """Create Stripe checkout session with multiple payment methods including Direct Debit"""
     from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
     
     if payment.plan not in PAYMENT_PACKAGES:
@@ -1253,7 +1357,9 @@ async def create_stripe_checkout(
     
     # Payment methods based on user selection
     payment_methods = ["card"]
-    if payment.payment_method == "google_pay":
+    if payment.payment_method == "bacs_debit":
+        payment_methods = ["bacs_debit"]
+    elif payment.payment_method == "google_pay":
         payment_methods = ["card"]  # Google Pay works through card method
     
     checkout_request = CheckoutSessionRequest(
@@ -1266,7 +1372,8 @@ async def create_stripe_checkout(
             "user_id": user["user_id"],
             "plan": payment.plan,
             "user_email": user.get("email", ""),
-            "payment_method": payment.payment_method
+            "payment_method": payment.payment_method,
+            "subscription_type": "monthly"
         }
     )
     
@@ -1281,6 +1388,7 @@ async def create_stripe_checkout(
         "currency": "gbp",
         "payment_method": payment.payment_method,
         "payment_status": "pending",
+        "subscription_type": "monthly",
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
@@ -1309,11 +1417,17 @@ async def get_payment_status(
         )
         
         plan = status.metadata.get("plan", transaction.get("plan", "professional"))
+        subscription_start = datetime.now(timezone.utc).isoformat()
+        subscription_end = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+        
         await db.users.update_one(
             {"user_id": user["user_id"]},
             {"$set": {
                 "plan": plan,
-                "download_count": 0
+                "download_count": 0,
+                "subscription_start": subscription_start,
+                "subscription_end": subscription_end,
+                "subscription_status": "active"
             }}
         )
         
@@ -1476,6 +1590,157 @@ async def get_stats(user: dict = Depends(get_current_user)):
         "plan": effective_plan,
         "is_owner": user_is_owner,
         "recurring_invoices": recurring_count
+    }
+
+# ========== PDF TEMPLATE CUSTOMIZATION ==========
+
+PDF_TEMPLATES = {
+    "classic": {
+        "name": "Classic Blue",
+        "header_color": "#0066cc",
+        "accent_color": "#0052a3",
+        "text_color": "#000000"
+    },
+    "modern": {
+        "name": "Modern Dark",
+        "header_color": "#1e293b",
+        "accent_color": "#3b82f6",
+        "text_color": "#1e293b"
+    },
+    "minimal": {
+        "name": "Minimal Grey",
+        "header_color": "#64748b",
+        "accent_color": "#475569",
+        "text_color": "#334155"
+    },
+    "emerald": {
+        "name": "Emerald Green",
+        "header_color": "#059669",
+        "accent_color": "#047857",
+        "text_color": "#064e3b"
+    },
+    "crimson": {
+        "name": "Crimson Red",
+        "header_color": "#dc2626",
+        "accent_color": "#b91c1c",
+        "text_color": "#7f1d1d"
+    }
+}
+
+@api_router.get("/pdf-templates")
+async def get_pdf_templates():
+    """Get available PDF templates"""
+    return PDF_TEMPLATES
+
+class TemplatePreference(BaseModel):
+    template_id: str
+
+@api_router.put("/user/pdf-template")
+async def set_pdf_template(
+    pref: TemplatePreference,
+    user: dict = Depends(get_current_user)
+):
+    """Set user's preferred PDF template"""
+    if pref.template_id not in PDF_TEMPLATES:
+        raise HTTPException(status_code=400, detail="Invalid template")
+    
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"pdf_template": pref.template_id}}
+    )
+    return {"message": "Template updated", "template_id": pref.template_id}
+
+# ========== RECURRING INVOICE PROCESSING ==========
+
+@api_router.post("/recurring/process")
+async def process_recurring_invoices(user: dict = Depends(get_current_user)):
+    """Manually trigger processing of recurring invoices for the current user"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    recurring_invoices = await db.invoices.find(
+        {
+            "user_id": user["user_id"],
+            "recurring.enabled": True,
+            "recurring.next_date": {"$lte": today}
+        },
+        {"_id": 0}
+    ).to_list(100)
+    
+    created_invoices = []
+    for inv in recurring_invoices:
+        # Create a new invoice from the recurring template
+        new_invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
+        new_invoice_number = await generate_invoice_number(user["user_id"])
+        
+        new_invoice = {
+            "invoice_id": new_invoice_id,
+            "user_id": user["user_id"],
+            "invoice_number": new_invoice_number,
+            "document_type": inv["document_type"],
+            "customer_name": inv["customer_name"],
+            "customer_address": inv.get("customer_address"),
+            "customer_email": inv.get("customer_email"),
+            "invoice_date": today,
+            "due_date": (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d"),
+            "items": inv["items"],
+            "subtotal": inv["subtotal"],
+            "tax_rate": inv.get("tax_rate", 0),
+            "tax_amount": inv.get("tax_amount", 0),
+            "total": inv["total"],
+            "status": "unpaid",
+            "notes": inv.get("notes"),
+            "terms_conditions": inv.get("terms_conditions"),
+            "from_company_name": inv.get("from_company_name"),
+            "from_trading_name": inv.get("from_trading_name"),
+            "from_registration_number": inv.get("from_registration_number"),
+            "from_address": inv.get("from_address"),
+            "from_email": inv.get("from_email"),
+            "from_phone": inv.get("from_phone"),
+            "from_tagline": inv.get("from_tagline"),
+            "recurring": None,  # Generated invoices are not recurring themselves
+            "parent_recurring_id": inv["invoice_id"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.invoices.insert_one(new_invoice)
+        if "_id" in new_invoice:
+            del new_invoice["_id"]
+        created_invoices.append(new_invoice)
+        
+        # Calculate next date based on frequency
+        recurring = inv.get("recurring", {})
+        frequency = recurring.get("frequency", "monthly")
+        
+        if frequency == "weekly":
+            next_date = datetime.now(timezone.utc) + timedelta(weeks=1)
+        elif frequency == "monthly":
+            next_date = datetime.now(timezone.utc) + timedelta(days=30)
+        elif frequency == "quarterly":
+            next_date = datetime.now(timezone.utc) + timedelta(days=90)
+        elif frequency == "yearly":
+            next_date = datetime.now(timezone.utc) + timedelta(days=365)
+        else:
+            next_date = datetime.now(timezone.utc) + timedelta(days=30)
+        
+        # Check if end_date is reached
+        end_date = recurring.get("end_date")
+        if end_date and next_date.strftime("%Y-%m-%d") > end_date:
+            # Disable recurring
+            await db.invoices.update_one(
+                {"invoice_id": inv["invoice_id"]},
+                {"$set": {"recurring.enabled": False}}
+            )
+        else:
+            # Update next_date
+            await db.invoices.update_one(
+                {"invoice_id": inv["invoice_id"]},
+                {"$set": {"recurring.next_date": next_date.strftime("%Y-%m-%d")}}
+            )
+    
+    return {
+        "processed": len(created_invoices),
+        "invoices": created_invoices
     }
 
 # ========== HEALTH CHECK ==========
