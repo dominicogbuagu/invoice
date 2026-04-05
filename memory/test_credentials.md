@@ -4,8 +4,8 @@
 - **Standard Test User**: Sign up via the UI (any email/password, min 6 chars)
 - **Owner Account**: Use email `rgvlimited@gmail.com` — triggers `is_owner: True` with unlimited access
 - **Existing Users**:
-  - `realtouchacademy@gmail.com` (Realtouch Academy - created from previous session)
-  - `visitsombeauty@gmail.com` / `@Dco2561981$` (Sombeauty London Ltd)
+  - `realtouchacademy@gmail.com` (Realtouch Academy)
+  - `visitsombeauty@gmail.com` / `1988chisom?` (Sombeauty London Ltd)
   - `freshtest999@gmail.com` / `TestPass123!` (Fresh Test User)
 
 ## Google OAuth
@@ -17,3 +17,8 @@
 - Base URL: https://invoice-dashboard-49.preview.emergentagent.com
 - Auth: Bearer token via `Authorization: Bearer <session_token>` header
 - Session token stored in localStorage after login
+
+## Password Reset Flow
+- POST /api/auth/forgot-password with email
+- If email service not configured, returns reset_token directly
+- POST /api/auth/reset-password with token + new password

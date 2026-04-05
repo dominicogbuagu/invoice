@@ -941,6 +941,129 @@ async def login(user_data: UserLogin, response: Response):
     
     return {"user": user_response, "session_token": session_token}
 
+# ========== FORGOT PASSWORD ==========
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest):
+    """Send password reset email"""
+    email = req.email.lower()
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    
+    if not user:
+        # Don't reveal whether email exists
+        return {"message": "If an account exists with this email, a reset link has been sent."}
+    
+    if user.get("auth_provider") == "google" and not user.get("password_hash"):
+        return {"message": "This account uses Google Sign-In. Please use Google to login."}
+    
+    # Generate reset token
+    reset_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Remove old reset tokens for this email
+    await db.password_resets.delete_many({"email": email})
+    
+    # Store reset token
+    await db.password_resets.insert_one({
+        "email": email,
+        "token": reset_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Build reset URL
+    reset_link_path = f"/reset-password?token={reset_token}"
+    
+    # Send email
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 40px 20px; }}
+            .header {{ background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); padding: 40px; text-align: center; border-radius: 12px 12px 0 0; }}
+            .header h1 {{ color: white; margin: 0; font-size: 28px; }}
+            .content {{ background: white; padding: 40px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+            .message {{ color: #475569; line-height: 1.6; }}
+            .code {{ font-size: 32px; font-weight: bold; color: #0066cc; text-align: center; padding: 20px; background: #f0f9ff; border-radius: 8px; letter-spacing: 4px; margin: 20px 0; }}
+            .footer {{ text-align: center; padding: 20px; color: #94a3b8; font-size: 14px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Password Reset</h1>
+            </div>
+            <div class="content">
+                <p class="message">Hi {user.get('name', 'there')},</p>
+                <p class="message">We received a request to reset your password. Use the code below to reset it:</p>
+                <div class="code">{reset_token[:8].upper()}</div>
+                <p class="message">This code expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+            </div>
+            <div class="footer">
+                <p>Realtouch Invoice</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    email_result = await send_email(email, "Password Reset - Realtouch Invoice", html_content)
+    
+    response_data = {"message": "If an account exists with this email, a reset link has been sent."}
+    
+    # If email service not configured, return token directly so user can still reset
+    if email_result.get("status") == "skipped":
+        response_data["reset_token"] = reset_token
+        response_data["note"] = "Email service not configured. Use this token to reset your password."
+    
+    return response_data
+
+@api_router.post("/auth/reset-password")
+async def reset_password(req: ResetPasswordRequest):
+    """Reset password using token"""
+    # Find the reset token
+    reset_doc = await db.password_resets.find_one({"token": req.token}, {"_id": 0})
+    
+    if not reset_doc:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    # Check expiry
+    expires_at = datetime.fromisoformat(reset_doc["expires_at"])
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
+        await db.password_resets.delete_one({"token": req.token})
+        raise HTTPException(status_code=400, detail="Reset token has expired. Please request a new one.")
+    
+    if len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Update password
+    new_hash = hash_password(req.password)
+    await db.users.update_one(
+        {"email": reset_doc["email"]},
+        {"$set": {"password_hash": new_hash}}
+    )
+    
+    # Delete used token
+    await db.password_resets.delete_many({"email": reset_doc["email"]})
+    
+    # Invalidate all existing sessions
+    user = await db.users.find_one({"email": reset_doc["email"]}, {"_id": 0})
+    if user:
+        await db.user_sessions.delete_many({"user_id": user["user_id"]})
+    
+    return {"message": "Password has been reset successfully. Please login with your new password."}
+
 # ========== USER ENDPOINTS ==========
 
 @api_router.get("/user/profile")

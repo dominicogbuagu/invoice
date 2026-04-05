@@ -26,9 +26,11 @@ const xhrPost = (url, body) => {
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
-  const [isSignup, setIsSignup] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [view, setView] = useState("login"); // login, signup, forgot, reset
+  const [resetToken, setResetToken] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -82,8 +84,79 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      const result = await xhrPost(`${BACKEND_URL}/api/auth/forgot-password`, { email: formData.email });
+      if (!result.ok) {
+        throw new Error(result.data.detail || "Failed to send reset email");
+      }
+      
+      if (result.data.reset_token) {
+        // Email service not configured - show token directly
+        setResetToken(result.data.reset_token);
+        setView("reset");
+        setSuccess("Email service not configured. Please enter your new password below.");
+      } else {
+        setSuccess(result.data.message || "If an account exists, a reset link has been sent.");
+      }
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      const result = await xhrPost(`${BACKEND_URL}/api/auth/reset-password`, {
+        token: resetToken,
+        password: formData.password
+      });
+      if (!result.ok) {
+        throw new Error(result.data.detail || "Failed to reset password");
+      }
+      setSuccess(result.data.message || "Password reset successfully!");
+      setTimeout(() => {
+        setView("login");
+        setSuccess("");
+        setResetToken("");
+        setFormData({ name: "", email: "", password: "" });
+      }, 2000);
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isSignup = view === "signup";
+
   const handleBack = () => {
     window.location.href = '/';
+  };
+
+  const getTitle = () => {
+    if (view === "forgot") return "Forgot Password";
+    if (view === "reset") return "Reset Password";
+    if (view === "signup") return "Create Account";
+    return "Welcome Back";
+  };
+
+  const getSubtitle = () => {
+    if (view === "forgot") return "Enter your email to receive a reset link";
+    if (view === "reset") return "Enter your new password";
+    if (view === "signup") return "Sign up to start creating invoices";
+    return "Sign in to access your invoicing dashboard";
   };
 
   return (
@@ -128,146 +201,280 @@ export default function LoginPage() {
           {/* Content */}
           <div className="p-8">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
-                {isSignup ? "Create Account" : "Welcome Back"}
+              <h2 className="text-xl font-semibold text-slate-900 mb-2" data-testid="auth-title">
+                {getTitle()}
               </h2>
               <p className="text-slate-500 text-sm">
-                {isSignup 
-                  ? "Sign up to start creating invoices" 
-                  : "Sign in to access your invoicing dashboard"}
+                {getSubtitle()}
               </p>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm" data-testid="auth-error">
                 {error}
               </div>
             )}
 
-            {/* Email/Password Form */}
-            <form onSubmit={handleEmailAuth} className="space-y-4">
-              {isSignup && (
+            {/* Success Message */}
+            {success && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm" data-testid="auth-success">
+                {success}
+              </div>
+            )}
+
+            {/* === FORGOT PASSWORD VIEW === */}
+            {view === "forgot" && (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-slate-700">Full Name</Label>
+                  <Label htmlFor="email" className="text-slate-700">Email Address</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
-                      id="name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
                       className="pl-10"
-                      required={isSignup}
+                      required
+                      data-testid="forgot-email-input"
                     />
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
+                <Button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-[#0066cc] hover:bg-[#0052a3] text-white py-5 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+                  data-testid="forgot-submit-btn"
+                >
+                  {loading ? (
+                    <><Loader2 className="h-5 w-5 animate-spin mr-2" />Sending...</>
+                  ) : "Send Reset Link"}
+                </Button>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-700">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="pl-10 pr-10"
-                    required
-                    minLength={6}
-                  />
-                  <button
+                <div className="text-center text-sm text-slate-500 mt-4">
+                  <button 
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    onClick={() => { setView("login"); setError(""); setSuccess(""); }}
+                    className="text-[#0066cc] hover:underline font-medium"
+                    data-testid="back-to-login"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    Back to Sign In
                   </button>
                 </div>
-              </div>
+              </form>
+            )}
 
-              <Button 
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#0066cc] hover:bg-[#0052a3] text-white py-5 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                    {isSignup ? "Creating Account..." : "Signing In..."}
-                  </>
-                ) : (
-                  isSignup ? "Create Account" : "Sign In"
-                )}
-              </Button>
-            </form>
+            {/* === RESET PASSWORD VIEW === */}
+            {view === "reset" && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-token" className="text-slate-700">Reset Token</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="reset-token"
+                      type="text"
+                      placeholder="Paste your reset token"
+                      value={resetToken}
+                      onChange={(e) => setResetToken(e.target.value)}
+                      className="pl-10"
+                      required
+                      data-testid="reset-token-input"
+                    />
+                  </div>
+                </div>
 
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-slate-400">or continue with</span>
-              </div>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-password" className="text-slate-700">New Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="new-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter new password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="pl-10 pr-10"
+                      required
+                      minLength={6}
+                      data-testid="reset-password-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
 
-            {/* Google Login Button */}
-            <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                theme="outline"
-                size="large"
-                width="100%"
-                text={isSignup ? "signup_with" : "signin_with"}
-                shape="rectangular"
-              />
-            </div>
+                <Button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-[#0066cc] hover:bg-[#0052a3] text-white py-5 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+                  data-testid="reset-submit-btn"
+                >
+                  {loading ? (
+                    <><Loader2 className="h-5 w-5 animate-spin mr-2" />Resetting...</>
+                  ) : "Reset Password"}
+                </Button>
 
-            {/* Toggle Login/Signup */}
-            <div className="mt-6 text-center text-sm text-slate-500">
-              {isSignup ? (
-                <>
-                  Already have an account?{" "}
+                <div className="text-center text-sm text-slate-500 mt-4">
                   <button 
-                    onClick={() => {setIsSignup(false); setError("");}}
+                    type="button"
+                    onClick={() => { setView("login"); setError(""); setSuccess(""); setResetToken(""); }}
                     className="text-[#0066cc] hover:underline font-medium"
                   >
-                    Sign In
+                    Back to Sign In
                   </button>
-                </>
-              ) : (
-                <>
-                  Don't have an account?{" "}
-                  <button 
-                    onClick={() => {setIsSignup(true); setError("");}}
-                    className="text-[#0066cc] hover:underline font-medium"
+                </div>
+              </form>
+            )}
+
+            {/* === LOGIN / SIGNUP VIEW === */}
+            {(view === "login" || view === "signup") && (
+              <>
+                <form onSubmit={handleEmailAuth} className="space-y-4">
+                  {isSignup && (
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-slate-700">Full Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="name"
+                          type="text"
+                          placeholder="John Doe"
+                          value={formData.name}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                          className="pl-10"
+                          required={isSignup}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-slate-700">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password" className="text-slate-700">Password</Label>
+                      {!isSignup && (
+                        <button
+                          type="button"
+                          onClick={() => { setView("forgot"); setError(""); setSuccess(""); }}
+                          className="text-xs text-[#0066cc] hover:underline font-medium"
+                          data-testid="forgot-password-link"
+                        >
+                          Forgot Password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        className="pl-10 pr-10"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <Button 
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-[#0066cc] hover:bg-[#0052a3] text-white py-5 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+                    data-testid="auth-submit-btn"
                   >
-                    Sign Up
-                  </button>
-                </>
-              )}
-            </div>
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        {isSignup ? "Creating Account..." : "Signing In..."}
+                      </>
+                    ) : (
+                      isSignup ? "Create Account" : "Sign In"
+                    )}
+                  </Button>
+                </form>
+
+                {/* Divider */}
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-slate-400">or continue with</span>
+                  </div>
+                </div>
+
+                {/* Google Login Button */}
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    theme="outline"
+                    size="large"
+                    width="100%"
+                    text={isSignup ? "signup_with" : "signin_with"}
+                    shape="rectangular"
+                  />
+                </div>
+
+                {/* Toggle Login/Signup */}
+                <div className="mt-6 text-center text-sm text-slate-500">
+                  {isSignup ? (
+                    <>
+                      Already have an account?{" "}
+                      <button 
+                        onClick={() => { setView("login"); setError(""); }}
+                        className="text-[#0066cc] hover:underline font-medium"
+                      >
+                        Sign In
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      Don&apos;t have an account?{" "}
+                      <button 
+                        onClick={() => { setView("signup"); setError(""); }}
+                        className="text-[#0066cc] hover:underline font-medium"
+                      >
+                        Sign Up
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Info */}
             <div className="mt-6 space-y-2 text-xs text-slate-400 text-center">
