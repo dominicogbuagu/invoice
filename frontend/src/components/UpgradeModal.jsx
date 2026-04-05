@@ -2,8 +2,7 @@ import { useState } from "react";
 import { X, Check, CreditCard, AlertCircle, Lock, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { xhrPost, BACKEND_URL } from "@/lib/xhr";
 
 export default function UpgradeModal({ onClose, user, downloadsUsed }) {
   const [loading, setLoading] = useState(false);
@@ -47,23 +46,17 @@ export default function UpgradeModal({ onClose, user, downloadsUsed }) {
     try {
       const originUrl = window.location.origin;
 
-      const response = await fetch(`${BACKEND_URL}/api/payments/stripe/create-checkout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
-        body: JSON.stringify({
-          plan: selectedPlan,
-          origin_url: originUrl,
-          payment_method: paymentMethod
-        })
+      const result = await xhrPost(`${BACKEND_URL}/api/payments/stripe/create-checkout`, {
+        plan: selectedPlan,
+        origin_url: originUrl,
+        payment_method: paymentMethod
       });
 
-      if (!response.ok) {
+      if (!result.ok) {
         throw new Error('Failed to create checkout session');
       }
 
-      const data = await response.json();
-      
-      window.location.href = data.url;
+      window.location.href = result.data.url;
     } catch (error) {
       console.error("Upgrade error:", error);
       toast.error("Failed to start checkout. Please try again.");

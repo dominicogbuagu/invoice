@@ -12,6 +12,39 @@ import LoginPage from "@/pages/LoginPage";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
+const xhrGet = (url) => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    const token = localStorage.getItem("session_token");
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.onload = () => {
+      let data = null;
+      try { data = JSON.parse(xhr.responseText); } catch (_) {}
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, data });
+    };
+    xhr.onerror = () => reject(new Error("Network error"));
+    xhr.send();
+  });
+};
+
+const xhrPost = (url, body) => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    const token = localStorage.getItem("session_token");
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.onload = () => {
+      let data = null;
+      try { data = JSON.parse(xhr.responseText); } catch (_) {}
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, data });
+    };
+    xhr.onerror = () => reject(new Error("Network error"));
+    xhr.send(body ? JSON.stringify(body) : null);
+  });
+};
+
 // Auth context provider
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -19,12 +52,9 @@ export const useAuth = () => {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('session_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const response = await fetch(`${BACKEND_URL}/api/auth/me`, { headers });
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
+      const result = await xhrGet(`${BACKEND_URL}/api/auth/me`);
+      if (result.ok && result.data) {
+        setUser(result.data);
       } else {
         setUser(null);
       }
@@ -38,12 +68,7 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
-      const token = localStorage.getItem('session_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      await fetch(`${BACKEND_URL}/api/auth/logout`, {
-        method: 'POST',
-        headers
-      });
+      await xhrPost(`${BACKEND_URL}/api/auth/logout`);
     } catch (e) {
       console.error('Logout error:', e);
     }
@@ -71,13 +96,10 @@ const ProtectedRoute = ({ children }) => {
 
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('session_token');
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${BACKEND_URL}/api/auth/me`, { headers });
-        if (!response.ok) throw new Error('Not authenticated');
-        const userData = await response.json();
+        const result = await xhrGet(`${BACKEND_URL}/api/auth/me`);
+        if (!result.ok) throw new Error('Not authenticated');
         setIsAuthenticated(true);
-        setUser(userData);
+        setUser(result.data);
       } catch (error) {
         setIsAuthenticated(false);
         navigate('/');

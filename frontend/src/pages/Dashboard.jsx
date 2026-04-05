@@ -30,16 +30,7 @@ import CustomerManager from "@/components/CustomerManager";
 import UpgradeModal from "@/components/UpgradeModal";
 import SettingsPage from "@/components/SettingsPage";
 import DashboardHome from "@/components/DashboardHome";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
-const getAuthHeaders = (contentType) => {
-  const token = localStorage.getItem('session_token');
-  const headers = {};
-  if (contentType) headers['Content-Type'] = contentType;
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  return headers;
-};
+import { xhrGet, xhrPost, xhrDelete, xhrGetBlob, BACKEND_URL } from "@/lib/xhr";
 
 const DOCUMENT_TYPES = [
   "Invoice", "Tax Invoice", "Proforma Invoice", "Receipt", 
@@ -82,10 +73,9 @@ export default function Dashboard({ user, setUser }) {
 
   const fetchUser = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/auth/me`, { headers: getAuthHeaders() });
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
+      const result = await xhrGet(`${BACKEND_URL}/api/auth/me`);
+      if (result.ok && result.data) {
+        setUser(result.data);
       }
     } catch (error) {
       console.error("Failed to fetch user:", error);
@@ -94,10 +84,9 @@ export default function Dashboard({ user, setUser }) {
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/customers`, { headers: getAuthHeaders() });
-      if (response.ok) {
-        const data = await response.json();
-        setCustomers(data);
+      const result = await xhrGet(`${BACKEND_URL}/api/customers`);
+      if (result.ok && result.data) {
+        setCustomers(result.data);
       }
     } catch (error) {
       console.error("Failed to fetch customers:", error);
@@ -112,10 +101,9 @@ export default function Dashboard({ user, setUser }) {
       if (typeFilter !== "all") params.append("document_type", typeFilter);
       if (params.toString()) url += `?${params.toString()}`;
 
-      const response = await fetch(url, { headers: getAuthHeaders() });
-      if (response.ok) {
-        const data = await response.json();
-        setInvoices(data);
+      const result = await xhrGet(url);
+      if (result.ok && result.data) {
+        setInvoices(result.data);
       }
     } catch (error) {
       console.error("Failed to fetch invoices:", error);
@@ -127,12 +115,9 @@ export default function Dashboard({ user, setUser }) {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/stats`, {
-        headers: getAuthHeaders()
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+      const result = await xhrGet(`${BACKEND_URL}/api/stats`);
+      if (result.ok && result.data) {
+        setStats(result.data);
       }
     } catch (error) {
       console.error("Failed to fetch stats:", error);
@@ -141,10 +126,7 @@ export default function Dashboard({ user, setUser }) {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${BACKEND_URL}/api/auth/logout`, {
-        method: 'POST',
-        headers: getAuthHeaders()
-      });
+      await xhrPost(`${BACKEND_URL}/api/auth/logout`);
     } catch (e) {
       console.error('Logout error:', e);
     }
@@ -153,33 +135,25 @@ export default function Dashboard({ user, setUser }) {
   };
 
   const handleDownload = async (invoice) => {
-    // Check download limit before attempting
     if (user?.plan === "starter" && (stats?.downloads_used || 0) >= 5) {
       setShowUpgradeModal(true);
       return;
     }
 
     try {
-      const response = await fetch(
-        `${BACKEND_URL}/api/invoices/${invoice.invoice_id}/download?format=pdf`,
-        { headers: getAuthHeaders() }
+      const result = await xhrGetBlob(
+        `${BACKEND_URL}/api/invoices/${invoice.invoice_id}/download?format=pdf`
       );
 
-      if (response.status === 403) {
-        const error = await response.json();
-        if (error.detail?.requires_upgrade) {
+      if (!result.ok) {
+        if (result.status === 403) {
           setShowUpgradeModal(true);
           return;
         }
-      }
-
-      if (!response.ok) {
         throw new Error('Download failed');
       }
 
-      // Download the file
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(result.blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${invoice.invoice_number}.pdf`;
@@ -188,7 +162,6 @@ export default function Dashboard({ user, setUser }) {
       window.URL.revokeObjectURL(url);
       a.remove();
 
-      // Refresh stats to update download count
       fetchStats();
       toast.success("Invoice downloaded successfully!");
     } catch (error) {
@@ -214,27 +187,21 @@ export default function Dashboard({ user, setUser }) {
 
     setSendingEmail(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/invoices/${showEmailModal.invoice_id}/send-email`, {
-        method: 'POST',
-        headers: getAuthHeaders('application/json'),
-        body: JSON.stringify({
-          invoice_id: showEmailModal.invoice_id,
-          recipient_email: emailData.recipient_email,
-          subject: emailData.subject,
-          message: emailData.message
-        })
+      const result = await xhrPost(`${BACKEND_URL}/api/invoices/${showEmailModal.invoice_id}/send-email`, {
+        invoice_id: showEmailModal.invoice_id,
+        recipient_email: emailData.recipient_email,
+        subject: emailData.subject,
+        message: emailData.message
       });
 
-      const result = await response.json();
-      
-      if (result.status === "success") {
+      if (result.data?.status === "success") {
         toast.success("Invoice sent successfully!");
         setShowEmailModal(null);
-      } else if (result.status === "skipped") {
+      } else if (result.data?.status === "skipped") {
         toast.info("Email service not configured. Configure RESEND_API_KEY in backend.");
         setShowEmailModal(null);
       } else {
-        throw new Error(result.message || "Failed to send email");
+        throw new Error(result.data?.message || "Failed to send email");
       }
     } catch (error) {
       console.error("Email error:", error);
@@ -246,12 +213,9 @@ export default function Dashboard({ user, setUser }) {
 
   const handleDeleteInvoice = async (invoiceId) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/invoices/${invoiceId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
+      const result = await xhrDelete(`${BACKEND_URL}/api/invoices/${invoiceId}`);
 
-      if (response.ok) {
+      if (result.ok) {
         toast.success("Invoice deleted");
         fetchInvoices();
         fetchStats();

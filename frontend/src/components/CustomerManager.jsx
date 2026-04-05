@@ -10,16 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
-const getAuthHeaders = (contentType) => {
-  const token = localStorage.getItem('session_token');
-  const headers = {};
-  if (contentType) headers['Content-Type'] = contentType;
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  return headers;
-};
+import { xhrGet, xhrPost, xhrPut, xhrDelete, BACKEND_URL } from "@/lib/xhr";
 
 export default function CustomerManager() {
   const [customers, setCustomers] = useState([]);
@@ -43,12 +34,9 @@ export default function CustomerManager() {
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/customers`, {
-        headers: getAuthHeaders()
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setCustomers(data);
+      const result = await xhrGet(`${BACKEND_URL}/api/customers`);
+      if (result.ok && result.data) {
+        setCustomers(result.data);
       }
     } catch (error) {
       console.error("Failed to fetch customers:", error);
@@ -73,15 +61,10 @@ export default function CustomerManager() {
         ? `${BACKEND_URL}/api/customers/${editingCustomer.customer_id}`
         : `${BACKEND_URL}/api/customers`;
       
-      const method = editingCustomer ? 'PUT' : 'POST';
+      const xhrMethod = editingCustomer ? xhrPut : xhrPost;
+      const result = await xhrMethod(url, formData);
 
-      const response = await fetch(url, {
-        method,
-        headers: getAuthHeaders('application/json'),
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
+      if (!result.ok) {
         throw new Error('Failed to save customer');
       }
 
@@ -111,12 +94,8 @@ export default function CustomerManager() {
 
   const handleDelete = async (customerId) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/customers/${customerId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-
-      if (response.ok) {
+      const result = await xhrDelete(`${BACKEND_URL}/api/customers/${customerId}`);
+      if (result.ok) {
         toast.success("Customer deleted");
         fetchCustomers();
         setShowDeleteConfirm(null);

@@ -6,7 +6,23 @@ import { Label } from "@/components/ui/label";
 import { GoogleLogin } from "@react-oauth/google";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-// REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+
+const xhrPost = (url, body) => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    const token = localStorage.getItem("session_token");
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.onload = () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch (_) {}
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, data });
+    };
+    xhr.onerror = () => reject(new Error("Network error. Please check your connection and try again."));
+    xhr.send(JSON.stringify(body));
+  });
+};
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -23,24 +39,16 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`${BACKEND_URL}/api/auth/google`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential: credentialResponse.credential })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Google authentication failed");
+      const result = await xhrPost(`${BACKEND_URL}/api/auth/google`, { credential: credentialResponse.credential });
+      if (!result.ok) {
+        throw new Error(result.data.detail || "Google authentication failed");
       }
-
-      if (data.session_token) {
-        localStorage.setItem("session_token", data.session_token);
+      if (result.data.session_token) {
+        localStorage.setItem("session_token", result.data.session_token);
       }
       window.location.href = "/dashboard";
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong. Please try again.");
       setLoading(false);
     }
   };
@@ -54,31 +62,22 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
+    const endpoint = isSignup ? "/api/auth/signup" : "/api/auth/login";
+    const payload = isSignup 
+      ? { name: formData.name, email: formData.email, password: formData.password }
+      : { email: formData.email, password: formData.password };
+
     try {
-      const endpoint = isSignup ? "/api/auth/signup" : "/api/auth/login";
-      const payload = isSignup 
-        ? { name: formData.name, email: formData.email, password: formData.password }
-        : { email: formData.email, password: formData.password };
-
-      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Authentication failed. Please try again.");
+      const result = await xhrPost(`${BACKEND_URL}${endpoint}`, payload);
+      if (!result.ok) {
+        throw new Error(result.data.detail || "Authentication failed. Please try again.");
       }
-
-      // Store token and redirect
-      if (data.session_token) {
-        localStorage.setItem("session_token", data.session_token);
+      if (result.data.session_token) {
+        localStorage.setItem("session_token", result.data.session_token);
       }
       window.location.href = "/dashboard";
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong. Please try again.");
       setLoading(false);
     }
   };

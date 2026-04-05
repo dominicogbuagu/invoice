@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { xhrGet, BACKEND_URL } from "@/lib/xhr";
 
 export default function PaymentSuccess() {
   const navigate = useNavigate();
@@ -21,22 +20,17 @@ export default function PaymentSuccess() {
 
     const checkPaymentStatus = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/payments/stripe/status/${sessionId}`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` }
-        });
+        const result = await xhrGet(`${BACKEND_URL}/api/payments/stripe/status/${sessionId}`);
 
-        if (!response.ok) {
+        if (!result.ok) {
           throw new Error('Failed to check payment status');
         }
 
-        const data = await response.json();
-
-        if (data.payment_status === "paid") {
+        if (result.data?.payment_status === "paid") {
           setStatus("success");
-        } else if (data.status === "expired") {
+        } else if (result.data?.status === "expired") {
           setStatus("expired");
         } else if (attempts < 5) {
-          // Continue polling
           setTimeout(() => setAttempts(prev => prev + 1), 2000);
         } else {
           setStatus("timeout");

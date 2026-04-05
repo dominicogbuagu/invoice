@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { xhrPut, xhrRequest, BACKEND_URL } from "@/lib/xhr";
 
 const PDF_TEMPLATES = {
   classic: { name: "Classic Blue", header_color: "#0066cc", accent_color: "#0052a3" },
@@ -39,16 +38,9 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/user/profile`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) throw new Error('Failed to save');
-      
-      const updatedUser = await response.json();
-      setUser(updatedUser);
+      const result = await xhrPut(`${BACKEND_URL}/api/user/profile`, formData);
+      if (!result.ok) throw new Error('Failed to save');
+      setUser(result.data);
       toast.success("Settings saved successfully!");
     } catch (error) {
       console.error("Save error:", error);
@@ -74,19 +66,11 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch(`${BACKEND_URL}/api/user/upload-logo`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
-        body: formData
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-      
-      const result = await response.json();
-      setUser({ ...user, company_logo: result.logo });
+      const fd = new FormData();
+      fd.append('file', file);
+      const result = await xhrRequest("POST", `${BACKEND_URL}/api/user/upload-logo`, fd);
+      if (!result.ok) throw new Error('Upload failed');
+      setUser({ ...user, company_logo: result.data.logo });
       toast.success("Logo uploaded successfully!");
     } catch (error) {
       console.error("Upload error:", error);
@@ -98,12 +82,8 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
 
   const handleDeleteLogo = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/user/logo`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` }
-      });
-
-      if (!response.ok) throw new Error('Delete failed');
+      const result = await xhrRequest("DELETE", `${BACKEND_URL}/api/user/logo`);
+      if (!result.ok) throw new Error('Delete failed');
       
       setUser({ ...user, company_logo: null });
       toast.success("Logo deleted");
@@ -332,11 +312,7 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
               onClick={async () => {
                 setSelectedTemplate(id);
                 try {
-                  const res = await fetch(`${BACKEND_URL}/api/user/pdf-template`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
-                    body: JSON.stringify({ template_id: id })
-                  });
+                  const res = await xhrPut(`${BACKEND_URL}/api/user/pdf-template`, { template_id: id });
                   if (res.ok) {
                     setUser({ ...user, pdf_template: id });
                     toast.success(`Template set to ${template.name}`);

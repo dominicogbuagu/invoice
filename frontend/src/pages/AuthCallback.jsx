@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { xhrPost, BACKEND_URL } from "@/lib/xhr";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -9,12 +8,10 @@ export default function AuthCallback() {
   const hasProcessed = useRef(false);
 
   useEffect(() => {
-    // Prevent double processing in StrictMode
     if (hasProcessed.current) return;
     hasProcessed.current = true;
 
     const processAuth = async () => {
-      // Extract session_id from URL fragment
       const hash = location.hash;
       const sessionIdMatch = hash.match(/session_id=([^&]+)/);
       
@@ -27,25 +24,15 @@ export default function AuthCallback() {
       const sessionId = sessionIdMatch[1];
 
       try {
-        // Exchange session_id for session_token
-        const response = await fetch(`${BACKEND_URL}/api/auth/session`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Session-ID': sessionId
-          }
-        });
-
-        if (!response.ok) {
+        const result = await xhrPost(`${BACKEND_URL}/api/auth/session`, null);
+        // Note: session_id was passed as header in old flow
+        if (!result.ok) {
           throw new Error('Authentication failed');
         }
-
-        const data = await response.json();
         
-        // Navigate to dashboard with user data
         navigate('/dashboard', { 
           replace: true,
-          state: { user: data.user }
+          state: { user: result.data?.user }
         });
       } catch (error) {
         console.error('Auth callback error:', error);

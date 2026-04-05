@@ -13,8 +13,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { xhrPost, xhrPut, BACKEND_URL } from "@/lib/xhr";
 
 const DOCUMENT_TYPES = [
   "Invoice", "Tax Invoice", "Proforma Invoice", "Receipt", 
@@ -157,15 +156,10 @@ export default function InvoiceEditor({ invoice, onClose, onSaved, user }) {
         ? `${BACKEND_URL}/api/invoices/${invoice.invoice_id}`
         : `${BACKEND_URL}/api/invoices`;
       
-      const method = invoice ? 'PUT' : 'POST';
+      const xhrMethod = invoice ? xhrPut : xhrPost;
+      const result = await xhrMethod(url, formData);
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
+      if (!result.ok) {
         throw new Error('Failed to save invoice');
       }
 
