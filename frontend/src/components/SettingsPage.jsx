@@ -41,8 +41,7 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
     try {
       const response = await fetch(`${BACKEND_URL}/api/user/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
         body: JSON.stringify(formData)
       });
 
@@ -80,7 +79,7 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
 
       const response = await fetch(`${BACKEND_URL}/api/user/upload-logo`, {
         method: 'POST',
-        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
         body: formData
       });
 
@@ -101,7 +100,7 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
     try {
       const response = await fetch(`${BACKEND_URL}/api/user/logo`, {
         method: 'DELETE',
-        credentials: 'include'
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` }
       });
 
       if (!response.ok) throw new Error('Delete failed');
@@ -335,8 +334,7 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
                 try {
                   const res = await fetch(`${BACKEND_URL}/api/user/pdf-template`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
                     body: JSON.stringify({ template_id: id })
                   });
                   if (res.ok) {

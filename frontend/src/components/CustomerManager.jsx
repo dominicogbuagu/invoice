@@ -13,6 +13,14 @@ import { toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
+const getAuthHeaders = (contentType) => {
+  const token = localStorage.getItem('session_token');
+  const headers = {};
+  if (contentType) headers['Content-Type'] = contentType;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+};
+
 export default function CustomerManager() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +44,7 @@ export default function CustomerManager() {
   const fetchCustomers = async () => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/customers`, {
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
       if (response.ok) {
         const data = await response.json();
@@ -69,8 +77,7 @@ export default function CustomerManager() {
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: getAuthHeaders('application/json'),
         body: JSON.stringify(formData)
       });
 
@@ -106,7 +113,7 @@ export default function CustomerManager() {
     try {
       const response = await fetch(`${BACKEND_URL}/api/customers/${customerId}`, {
         method: 'DELETE',
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
 
       if (response.ok) {

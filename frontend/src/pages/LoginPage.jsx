@@ -26,16 +26,15 @@ export default function LoginPage() {
       const response = await fetch(`${BACKEND_URL}/api/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ credential: credentialResponse.credential })
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.detail || "Google authentication failed");
+        throw new Error(data.detail || "Google authentication failed");
       }
 
-      const data = await response.json();
       if (data.session_token) {
         localStorage.setItem("session_token", data.session_token);
       }
@@ -64,7 +63,6 @@ export default function LoginPage() {
       const response = await fetch(`${BACKEND_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(payload)
       });
 

@@ -49,8 +49,7 @@ export default function UpgradeModal({ onClose, user, downloadsUsed }) {
 
       const response = await fetch(`${BACKEND_URL}/api/payments/stripe/create-checkout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
         body: JSON.stringify({
           plan: selectedPlan,
           origin_url: originUrl,

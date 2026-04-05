@@ -33,6 +33,14 @@ import DashboardHome from "@/components/DashboardHome";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
+const getAuthHeaders = (contentType) => {
+  const token = localStorage.getItem('session_token');
+  const headers = {};
+  if (contentType) headers['Content-Type'] = contentType;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+};
+
 const DOCUMENT_TYPES = [
   "Invoice", "Tax Invoice", "Proforma Invoice", "Receipt", 
   "Sales Receipt", "Cash Receipt", "Quote", "Credit Memo",
@@ -74,7 +82,7 @@ export default function Dashboard({ user, setUser }) {
 
   const fetchUser = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/auth/me`, { credentials: 'include' });
+      const response = await fetch(`${BACKEND_URL}/api/auth/me`, { headers: getAuthHeaders() });
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
@@ -86,7 +94,7 @@ export default function Dashboard({ user, setUser }) {
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/customers`, { credentials: 'include' });
+      const response = await fetch(`${BACKEND_URL}/api/customers`, { headers: getAuthHeaders() });
       if (response.ok) {
         const data = await response.json();
         setCustomers(data);
@@ -104,7 +112,7 @@ export default function Dashboard({ user, setUser }) {
       if (typeFilter !== "all") params.append("document_type", typeFilter);
       if (params.toString()) url += `?${params.toString()}`;
 
-      const response = await fetch(url, { credentials: 'include' });
+      const response = await fetch(url, { headers: getAuthHeaders() });
       if (response.ok) {
         const data = await response.json();
         setInvoices(data);
@@ -120,7 +128,7 @@ export default function Dashboard({ user, setUser }) {
   const fetchStats = async () => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/stats`, {
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
       if (response.ok) {
         const data = await response.json();
@@ -135,11 +143,12 @@ export default function Dashboard({ user, setUser }) {
     try {
       await fetch(`${BACKEND_URL}/api/auth/logout`, {
         method: 'POST',
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
     } catch (e) {
       console.error('Logout error:', e);
     }
+    localStorage.removeItem('session_token');
     navigate('/');
   };
 
@@ -153,7 +162,7 @@ export default function Dashboard({ user, setUser }) {
     try {
       const response = await fetch(
         `${BACKEND_URL}/api/invoices/${invoice.invoice_id}/download?format=pdf`,
-        { credentials: 'include' }
+        { headers: getAuthHeaders() }
       );
 
       if (response.status === 403) {
@@ -207,8 +216,7 @@ export default function Dashboard({ user, setUser }) {
     try {
       const response = await fetch(`${BACKEND_URL}/api/invoices/${showEmailModal.invoice_id}/send-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: getAuthHeaders('application/json'),
         body: JSON.stringify({
           invoice_id: showEmailModal.invoice_id,
           recipient_email: emailData.recipient_email,
@@ -240,7 +248,7 @@ export default function Dashboard({ user, setUser }) {
     try {
       const response = await fetch(`${BACKEND_URL}/api/invoices/${invoiceId}`, {
         method: 'DELETE',
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
 
       if (response.ok) {

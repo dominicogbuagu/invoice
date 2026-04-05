@@ -161,8 +161,7 @@ export default function InvoiceEditor({ invoice, onClose, onSaved, user }) {
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` },
         body: JSON.stringify(formData)
       });
 

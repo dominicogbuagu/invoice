@@ -33,8 +33,7 @@ export default function AuthCallback() {
           headers: {
             'Content-Type': 'application/json',
             'X-Session-ID': sessionId
-          },
-          credentials: 'include'
+          }
         });
 
         if (!response.ok) {

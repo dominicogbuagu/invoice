@@ -22,7 +22,7 @@ export default function PaymentSuccess() {
     const checkPaymentStatus = async () => {
       try {
         const response = await fetch(`${BACKEND_URL}/api/payments/stripe/status/${sessionId}`, {
-          credentials: 'include'
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` }
         });
 
         if (!response.ok) {

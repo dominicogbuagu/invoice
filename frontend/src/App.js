@@ -19,9 +19,9 @@ export const useAuth = () => {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
-        credentials: 'include'
-      });
+      const token = localStorage.getItem('session_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch(`${BACKEND_URL}/api/auth/me`, { headers });
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
@@ -38,13 +38,16 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
+      const token = localStorage.getItem('session_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       await fetch(`${BACKEND_URL}/api/auth/logout`, {
         method: 'POST',
-        credentials: 'include'
+        headers
       });
     } catch (e) {
       console.error('Logout error:', e);
     }
+    localStorage.removeItem('session_token');
     setUser(null);
   };
 
@@ -68,9 +71,9 @@ const ProtectedRoute = ({ children }) => {
 
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
-          credentials: 'include'
-        });
+        const token = localStorage.getItem('session_token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${BACKEND_URL}/api/auth/me`, { headers });
         if (!response.ok) throw new Error('Not authenticated');
         const userData = await response.json();
         setIsAuthenticated(true);
