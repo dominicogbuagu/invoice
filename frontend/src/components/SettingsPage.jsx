@@ -24,9 +24,9 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
   const [formData, setFormData] = useState({
     name: user?.name || "",
     company_details: {
-      name: user?.company_details?.name || "Realtouch Global Ventures Ltd",
+      name: user?.company_details?.name || "",
       trading_name: user?.company_details?.trading_name || "",
-      registration_number: user?.company_details?.registration_number || "16578193",
+      registration_number: user?.company_details?.registration_number || "",
       address: user?.company_details?.address || "",
       email: user?.company_details?.email || "",
       phone: user?.company_details?.phone || "",
@@ -362,36 +362,6 @@ export default function SettingsPage({ user, setUser, onUpgrade }) {
               Upgrade
             </Button>
           )}
-        </div>
-      </div>
-
-      {/* Deployment Guide */}
-      <div className="card p-6 mt-6 bg-slate-50">
-        <h3 className="font-semibold text-slate-900 mb-4">Production Deployment Guide</h3>
-        <div className="space-y-4 text-sm text-slate-600">
-          <div>
-            <p className="font-medium text-slate-700 mb-1">1. Stripe Configuration</p>
-            <p>Replace test keys in <code className="bg-slate-200 px-1 rounded">backend/.env</code>:</p>
-            <pre className="bg-slate-200 p-2 rounded mt-1 text-xs overflow-x-auto">
-STRIPE_API_KEY=sk_live_your_production_key
-            </pre>
-          </div>
-          <div>
-            <p className="font-medium text-slate-700 mb-1">2. Email Configuration (Resend)</p>
-            <p>Add your Resend API key:</p>
-            <pre className="bg-slate-200 p-2 rounded mt-1 text-xs overflow-x-auto">
-RESEND_API_KEY=re_your_api_key
-SENDER_EMAIL=invoices@yourdomain.com
-            </pre>
-          </div>
-          <div>
-            <p className="font-medium text-slate-700 mb-1">3. Database</p>
-            <p>Update <code className="bg-slate-200 px-1 rounded">MONGO_URL</code> to your production MongoDB.</p>
-          </div>
-          <div>
-            <p className="font-medium text-slate-700 mb-1">4. Custom Domain</p>
-            <p>Update frontend <code className="bg-slate-200 px-1 rounded">REACT_APP_BACKEND_URL</code> to your backend URL.</p>
-          </div>
         </div>
       </div>
     </div>

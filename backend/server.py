@@ -88,9 +88,9 @@ logger = logging.getLogger(__name__)
 # ========== MODELS ==========
 
 class CompanyDetails(BaseModel):
-    name: str = "Realtouch Global Ventures Ltd"
+    name: str = ""
     trading_name: Optional[str] = None
-    registration_number: str = "16578193"
+    registration_number: str = ""
     address: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -351,7 +351,7 @@ async def send_verification_email(user_email: str, user_name: str):
                 </p>
             </div>
             <div class="footer">
-                <p>Realtouch Global Ventures Ltd | Company No. 16578193</p>
+                <p>Realtouch Invoice</p>
                 <p>© 2025 All rights reserved</p>
             </div>
         </div>
@@ -400,7 +400,7 @@ async def send_invoice_email(invoice: dict, recipient_email: str, pdf_bytes: byt
                 <p>Thank you for your business!</p>
             </div>
             <div class="footer">
-                <p>Realtouch Global Ventures Ltd | Company No. 16578193</p>
+                <p>Realtouch Invoice</p>
             </div>
         </div>
     </body>
@@ -467,9 +467,9 @@ def generate_invoice_pdf(invoice: dict, user: dict = None) -> BytesIO:
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 14)
     
-    company_name = invoice.get('from_company_name') or (user and user.get('company_details', {}).get('name')) or "Realtouch Global Ventures Ltd"
+    company_name = invoice.get('from_company_name') or (user and user.get('company_details', {}).get('name')) or "Your Company"
     trading_name = invoice.get('from_trading_name') or (user and user.get('company_details', {}).get('trading_name'))
-    reg_number = invoice.get('from_registration_number') or (user and user.get('company_details', {}).get('registration_number')) or "16578193"
+    reg_number = invoice.get('from_registration_number') or (user and user.get('company_details', {}).get('registration_number')) or ""
     from_address = invoice.get('from_address') or (user and user.get('company_details', {}).get('address'))
     tagline = invoice.get('from_tagline') or (user and user.get('company_details', {}).get('tagline'))
     
@@ -671,9 +671,9 @@ async def create_session(request: Request, response: Response):
             "download_count": 0,
             "email_verified": True,
             "company_details": {
-                "name": "Realtouch Global Ventures Ltd",
+                "name": "",
                 "trading_name": None,
-                "registration_number": "16578193",
+                "registration_number": "",
                 "address": None,
                 "tagline": None
             },
@@ -777,9 +777,9 @@ async def google_oauth_login(request_body: GoogleCredentialRequest, response: Re
             "email_verified": True,
             "auth_provider": "google",
             "company_details": {
-                "name": "Realtouch Global Ventures Ltd",
+                "name": "",
                 "trading_name": None,
-                "registration_number": "16578193",
+                "registration_number": "",
                 "address": None,
                 "tagline": None
             },
@@ -852,9 +852,9 @@ async def signup(user_data: UserSignup, response: Response):
         "password_hash": password_hash,
         "auth_provider": "email",
         "company_details": {
-            "name": "Realtouch Global Ventures Ltd",
+            "name": "",
             "trading_name": None,
-            "registration_number": "16578193",
+            "registration_number": "",
             "address": None,
             "tagline": None
         },
@@ -1865,6 +1865,213 @@ async def process_recurring_invoices(user: dict = Depends(get_current_user)):
         "processed": len(created_invoices),
         "invoices": created_invoices
     }
+
+# ========== ADMIN MANAGEMENT PORTAL ==========
+
+async def require_admin(user: dict = Depends(get_current_user)):
+    """Require admin/owner access"""
+    if not is_owner(user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+# --- Admin: System Stats ---
+@api_router.get("/admin/stats")
+async def admin_stats(user: dict = Depends(require_admin)):
+    """Get system-wide statistics"""
+    total_users = await db.users.count_documents({})
+    total_invoices = await db.invoices.count_documents({})
+    total_customers = await db.customers.count_documents({})
+    
+    # Plan distribution
+    starter_users = await db.users.count_documents({"plan": "starter"})
+    pro_users = await db.users.count_documents({"plan": "professional"})
+    enterprise_users = await db.users.count_documents({"plan": "enterprise"})
+    
+    # Revenue
+    paid_txns = await db.payment_transactions.find(
+        {"payment_status": "paid"}, {"_id": 0, "amount": 1, "currency": 1, "plan": 1}
+    ).to_list(10000)
+    total_revenue = sum(t.get("amount", 0) for t in paid_txns)
+    
+    # Recent activity
+    recent_users = await db.users.count_documents({})
+    
+    # Invoice stats
+    all_invoices = await db.invoices.find({}, {"_id": 0, "total": 1, "status": 1}).to_list(100000)
+    total_invoice_value = sum(inv.get("total", 0) for inv in all_invoices)
+    paid_invoices = sum(1 for inv in all_invoices if inv.get("status") == "paid")
+    unpaid_invoices = sum(1 for inv in all_invoices if inv.get("status") != "paid")
+    
+    # Downloads
+    total_downloads = await db.downloads.count_documents({})
+    
+    return {
+        "total_users": total_users,
+        "total_invoices": total_invoices,
+        "total_customers": total_customers,
+        "total_downloads": total_downloads,
+        "total_revenue": total_revenue,
+        "total_invoice_value": total_invoice_value,
+        "paid_invoices": paid_invoices,
+        "unpaid_invoices": unpaid_invoices,
+        "plan_distribution": {
+            "starter": starter_users,
+            "professional": pro_users,
+            "enterprise": enterprise_users
+        }
+    }
+
+# --- Admin: User Management ---
+@api_router.get("/admin/users")
+async def admin_list_users(user: dict = Depends(require_admin)):
+    """List all users"""
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(10000)
+    return users
+
+class AdminUserUpdate(BaseModel):
+    plan: Optional[str] = None
+    is_disabled: Optional[bool] = None
+    download_count: Optional[int] = None
+
+@api_router.put("/admin/users/{user_id}")
+async def admin_update_user(user_id: str, update: AdminUserUpdate, admin: dict = Depends(require_admin)):
+    """Update user plan, status, or download count"""
+    update_data = {}
+    if update.plan is not None:
+        if update.plan not in ["starter", "professional", "enterprise"]:
+            raise HTTPException(status_code=400, detail="Invalid plan")
+        update_data["plan"] = update.plan
+    if update.is_disabled is not None:
+        update_data["is_disabled"] = update.is_disabled
+    if update.download_count is not None:
+        update_data["download_count"] = update.download_count
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No update fields provided")
+    
+    result = await db.users.update_one({"user_id": user_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    updated_user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    return updated_user
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, admin: dict = Depends(require_admin)):
+    """Delete a user and all their data"""
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await db.users.delete_one({"user_id": user_id})
+    await db.invoices.delete_many({"user_id": user_id})
+    await db.customers.delete_many({"user_id": user_id})
+    await db.downloads.delete_many({"user_id": user_id})
+    await db.user_sessions.delete_many({"user_id": user_id})
+    
+    return {"message": f"User {user.get('email')} and all data deleted"}
+
+# --- Admin: Payment Transactions ---
+@api_router.get("/admin/transactions")
+async def admin_list_transactions(admin: dict = Depends(require_admin)):
+    """List all payment transactions"""
+    transactions = await db.payment_transactions.find({}, {"_id": 0}).sort("created_at", -1).to_list(10000)
+    return transactions
+
+# --- Admin: Feature Controls ---
+@api_router.get("/admin/settings")
+async def admin_get_settings(admin: dict = Depends(require_admin)):
+    """Get global admin settings"""
+    settings = await db.admin_settings.find_one({"key": "global"}, {"_id": 0})
+    if not settings:
+        settings = {
+            "key": "global",
+            "free_download_limit": 5,
+            "max_invoices_per_free_user": 100,
+            "features": {
+                "email_sending": True,
+                "pdf_downloads": True,
+                "recurring_invoices": True,
+                "google_pay": True,
+                "direct_debit": True
+            },
+            "pricing": {
+                "professional": 5.00,
+                "enterprise": 49.90
+            },
+            "maintenance_mode": False
+        }
+        await db.admin_settings.insert_one(settings)
+    return settings
+
+class AdminSettingsUpdate(BaseModel):
+    free_download_limit: Optional[int] = None
+    max_invoices_per_free_user: Optional[int] = None
+    features: Optional[dict] = None
+    pricing: Optional[dict] = None
+    maintenance_mode: Optional[bool] = None
+
+@api_router.put("/admin/settings")
+async def admin_update_settings(update: AdminSettingsUpdate, admin: dict = Depends(require_admin)):
+    """Update global admin settings"""
+    update_data = {}
+    if update.free_download_limit is not None:
+        update_data["free_download_limit"] = update.free_download_limit
+    if update.max_invoices_per_free_user is not None:
+        update_data["max_invoices_per_free_user"] = update.max_invoices_per_free_user
+    if update.features is not None:
+        update_data["features"] = update.features
+    if update.pricing is not None:
+        update_data["pricing"] = update.pricing
+        # Update the runtime pricing
+        global PAYMENT_PACKAGES
+        PAYMENT_PACKAGES = update.pricing
+    if update.maintenance_mode is not None:
+        update_data["maintenance_mode"] = update.maintenance_mode
+    
+    await db.admin_settings.update_one(
+        {"key": "global"},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    settings = await db.admin_settings.find_one({"key": "global"}, {"_id": 0})
+    return settings
+
+# --- Admin: PDF Templates Management ---
+class AdminTemplateUpdate(BaseModel):
+    template_id: str
+    name: str
+    header_color: str
+    accent_color: str
+    text_color: str
+
+@api_router.post("/admin/templates")
+async def admin_add_template(template: AdminTemplateUpdate, admin: dict = Depends(require_admin)):
+    """Add or update a PDF template"""
+    PDF_TEMPLATES[template.template_id] = {
+        "name": template.name,
+        "header_color": template.header_color,
+        "accent_color": template.accent_color,
+        "text_color": template.text_color
+    }
+    # Persist to DB
+    await db.admin_templates.update_one(
+        {"template_id": template.template_id},
+        {"$set": template.model_dump()},
+        upsert=True
+    )
+    return {"message": "Template saved", "templates": PDF_TEMPLATES}
+
+@api_router.delete("/admin/templates/{template_id}")
+async def admin_delete_template(template_id: str, admin: dict = Depends(require_admin)):
+    """Delete a PDF template"""
+    if template_id == "classic":
+        raise HTTPException(status_code=400, detail="Cannot delete the default template")
+    if template_id in PDF_TEMPLATES:
+        del PDF_TEMPLATES[template_id]
+    await db.admin_templates.delete_one({"template_id": template_id})
+    return {"message": "Template deleted", "templates": PDF_TEMPLATES}
 
 # ========== HEALTH CHECK ==========
 

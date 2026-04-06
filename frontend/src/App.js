@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import AuthCallback from "@/pages/AuthCallback";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import LoginPage from "@/pages/LoginPage";
+import AdminPortal from "@/pages/AdminPortal";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
@@ -149,6 +150,7 @@ function AppRouter() {
         } 
       />
       <Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/admin" element={<AdminPortal />} />
     </Routes>
   );
 }

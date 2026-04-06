@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { 
   FileText, Users, BarChart3, Settings, LogOut, Plus, Search,
   Download, Edit, Trash2, Eye, ChevronDown, X, AlertCircle,
-  DollarSign, Clock, TrendingUp, CreditCard, Mail, Upload, RefreshCw, Home
+  DollarSign, Clock, TrendingUp, CreditCard, Mail, Upload, RefreshCw, Home, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -419,6 +419,16 @@ export default function Dashboard({ user, setUser }) {
               Logout
             </button>
           </div>
+          {(user?.is_owner || stats?.is_owner) && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-lg text-xs font-medium hover:bg-amber-500/20 transition-colors"
+              data-testid="admin-portal-btn"
+            >
+              <Shield size={14} />
+              Admin Portal
+            </button>
+          )}
         </div>
       </aside>
 
