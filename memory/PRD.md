@@ -1,24 +1,17 @@
 # Realtouch Invoice - Product Requirements Document
 
 ## Original Problem Statement
-Build a full-stack SaaS invoicing platform called "Realtouch Invoice" with:
-- High-converting landing page
-- Dashboard for invoice management (CRUD)
-- Customizable tax rates, editable 'From' section, logo upload for PDFs
-- 5 permanent download limit for free starter plan users (unlimited for paid/owners)
-- Stripe, PayPal, Google Pay payment integration
-- Email/Password + Google OAuth authentication
-- Owner admin role bypassing all restrictions
-- GitHub sync
+Build a full-stack SaaS invoicing platform called "Realtouch Invoice" with landing page, dashboard for invoice management (CRUD), customizable tax rates, editable 'From' section, logo upload for PDFs, 5 permanent download limit for free users, Stripe/PayPal/Google Pay payments, Email/Password + Google OAuth auth, owner admin role, GitHub sync, and a backend admin management portal.
 
 ## Tech Stack
 - **Frontend**: React.js, Tailwind CSS, Shadcn UI, @react-oauth/google
 - **Backend**: FastAPI, Python
 - **Database**: MongoDB
 - **Auth**: Custom JWT (Email/Password) + Custom Google OAuth
-- **PDF Generation**: ReportLab
+- **PDF Generation**: ReportLab (5 color templates)
 - **Payments**: Stripe (card, BACS Direct Debit, Google Pay)
 - **Emails**: Resend API
+- **Domain**: https://www.invoice.realtouch.com
 
 ## Pricing
 - Starter: Free (5 permanent downloads)
@@ -30,54 +23,54 @@ Build a full-stack SaaS invoicing platform called "Realtouch Invoice" with:
 - [x] Dashboard with invoice CRUD
 - [x] Customer management
 - [x] Email/Password signup & login
+- [x] Forgot Password / Reset Password flow
 - [x] Custom Google OAuth (user-controlled branding)
-- [x] PDF generation with user logos & template colors
+- [x] PDF generation with user logos & template colors (5 themes)
 - [x] 5-download permanent limit for free users
 - [x] Owner bypass (rgvlimited@gmail.com)
 - [x] Stripe checkout (card, BACS Direct Debit, Google Pay)
-- [x] PDF Template Customization (5 themes: Classic Blue, Modern Dark, Minimal Grey, Emerald Green, Crimson Red)
+- [x] PDF Template Customization in Settings
 - [x] Recurring invoice processing endpoint
 - [x] Settings page with logo upload, company details, template selector
 - [x] Email invoices via Resend
 - [x] Payment success page
-
-## Completed This Session (Feb 4, 2026)
-- Updated pricing: Professional £5/month, Enterprise £49.90/month
-- Replaced Emergent-managed OAuth with Custom Google OAuth (user's own credentials)
-- Added BACS Direct Debit payment method in Stripe checkout
-- Added PDF Template Customization (5 color themes with preview swatches)
-- Added recurring invoice processing endpoint (/api/recurring/process)
-- Fixed lint issues and backend syntax errors
+- [x] **Admin Management Portal** (/admin route):
+  - System Overview (users, invoices, revenue, downloads, plan distribution)
+  - User Management (view, search, upgrade/downgrade plans, enable/disable, delete)
+  - Payment Transactions list
+  - Feature Controls (toggle features, set download limits, manage pricing)
+  - PDF Template Management (add/edit/delete templates)
+  - Maintenance Mode toggle
+- [x] Removed Production Deployment Guide from public Settings page
+- [x] New users get blank company details (not Realtouch)
+- [x] All API calls use XMLHttpRequest (bypass Emergent script)
 
 ## Upcoming Tasks (P1)
-- [ ] Recurring Invoices UI - Frontend tab/page for managing recurring invoice schedules
-- [ ] Background cron job for auto-generating recurring invoices
-- [ ] PDF Template Customization - Preview before download
-- [ ] PayPal integration for plan upgrades
+- [ ] Recurring Invoices management UI
+- [ ] Background cron for auto-generating recurring invoices
+- [ ] PDF preview before download
+- [ ] PayPal integration
 
 ## Future Tasks (P2)
-- [ ] Multi-user access for Enterprise plan
-- [ ] API access for Enterprise plan
+- [ ] Multi-user access for Enterprise
+- [ ] API access for Enterprise
 - [ ] Advanced analytics dashboard
-- [ ] Dedicated account manager assignment
-- [ ] Subscription management page (view/cancel/change plan)
+- [ ] Subscription management page
 
 ## Key API Endpoints
-- POST /api/auth/signup - Email/Password registration
-- POST /api/auth/login - Email/Password login
-- POST /api/auth/google - Custom Google OAuth login
-- GET /api/auth/me - Current user info
-- CRUD /api/invoices - Invoice management
-- CRUD /api/customers - Customer management
-- GET /api/invoices/{id}/download - PDF download with limits
-- POST /api/payments/stripe/create-checkout - Stripe checkout (card/bacs_debit/google_pay)
-- GET /api/pdf-templates - Available PDF themes
-- PUT /api/user/pdf-template - Set user's preferred theme
-- POST /api/recurring/process - Process due recurring invoices
+### Auth
+- POST /api/auth/signup, /api/auth/login, /api/auth/google
+- POST /api/auth/forgot-password, /api/auth/reset-password
+- GET /api/auth/me, POST /api/auth/logout
 
-## DB Schema
-- users: {user_id, email, name, password_hash, picture, plan, download_count, is_owner, pdf_template, company_details, subscription_start, subscription_end, subscription_status}
-- invoices: {invoice_id, user_id, invoice_number, document_type, customer_name, items, subtotal, tax_rate, tax_amount, total, status, recurring, parent_recurring_id}
-- customers: {customer_id, user_id, name, email, phone, address}
-- downloads: {user_id, invoice_id, format, downloaded_at}
-- payment_transactions: {transaction_id, user_id, session_id, plan, amount, currency, payment_method, payment_status, subscription_type}
+### Admin (owner only)
+- GET /api/admin/stats, /api/admin/users, /api/admin/transactions, /api/admin/settings
+- PUT /api/admin/users/{id}, /api/admin/settings
+- POST /api/admin/templates, DELETE /api/admin/templates/{id}
+- DELETE /api/admin/users/{id}
+
+### Business
+- CRUD /api/invoices, /api/customers
+- GET /api/invoices/{id}/download
+- POST /api/payments/stripe/create-checkout
+- GET /api/pdf-templates, PUT /api/user/pdf-template

@@ -1,24 +1,20 @@
 # Test Credentials
 
 ## Email/Password Auth
-- **Standard Test User**: Sign up via the UI (any email/password, min 6 chars)
-- **Owner Account**: Use email `rgvlimited@gmail.com` — triggers `is_owner: True` with unlimited access
-- **Existing Users**:
-  - `realtouchacademy@gmail.com` (Realtouch Academy)
-  - `visitsombeauty@gmail.com` / `1988chisom?` (Sombeauty London Ltd)
-  - `freshtest999@gmail.com` / `TestPass123!` (Fresh Test User)
+- **Owner/Admin**: `rgvlimited@gmail.com` / `Admin123` — is_owner: True, unlimited access, admin portal access
+- **Test User**: `visitsombeauty@gmail.com` / `1988chisom?` (Sombeauty London Ltd)
+- **Test User**: `realtouchacademy@gmail.com` (Realtouch Academy - password unknown)
 
 ## Google OAuth
 - Uses custom Google OAuth (Client ID: 142683158913-...)
-- Requires Authorized JavaScript Origins in Google Cloud Console to match the access domain
-- Any Google account can authenticate
+- Domain for Origins: https://www.invoice.realtouch.com
+- Preview Origins: https://invoice-dashboard-49.preview.emergentagent.com
 
 ## Backend API
 - Base URL: https://invoice-dashboard-49.preview.emergentagent.com
 - Auth: Bearer token via `Authorization: Bearer <session_token>` header
-- Session token stored in localStorage after login
+- Admin endpoints require owner account
 
-## Password Reset Flow
-- POST /api/auth/forgot-password with email
-- If email service not configured, returns reset_token directly
-- POST /api/auth/reset-password with token + new password
+## Admin Portal
+- URL: /admin (owner-only access)
+- Features: Overview, Users, Transactions, Feature Controls, PDF Templates
