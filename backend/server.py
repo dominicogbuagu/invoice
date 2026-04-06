@@ -1340,6 +1340,35 @@ async def download_invoice(
         }
     )
 
+@api_router.get("/invoices/{invoice_id}/preview")
+async def preview_invoice(
+    invoice_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Preview invoice as PDF without consuming download quota"""
+    user_doc = await db.users.find_one(
+        {"user_id": user["user_id"]},
+        {"_id": 0}
+    )
+
+    invoice = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    buffer = generate_invoice_pdf(invoice, user_doc)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename={invoice['invoice_number']}_preview.pdf"
+        }
+    )
+
 @api_router.post("/invoices/{invoice_id}/send-email")
 async def send_invoice_via_email(
     invoice_id: str,
@@ -1483,7 +1512,7 @@ async def create_stripe_checkout(
     if payment.payment_method == "bacs_debit":
         payment_methods = ["bacs_debit"]
     elif payment.payment_method == "google_pay":
-        payment_methods = ["card"]  # Google Pay works through card method
+        payment_methods = ["card"]  # Google Pay is available through Stripe card payment method
     
     checkout_request = CheckoutSessionRequest(
         amount=amount,

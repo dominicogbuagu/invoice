@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 class RealtouchInvoiceAPITester:
-    def __init__(self, base_url: str = "https://invoice-dashboard-49.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://stripe-invoice-test.preview.emergentagent.com"):
         self.base_url = base_url.rstrip('/')
         self.session_token = "test_session_1766360147256"  # Use provided test session
         self.test_user_id = None
@@ -573,7 +573,7 @@ class RealtouchInvoiceAPITester:
 
         checkout_data = {
             "plan": "professional",
-            "origin_url": "https://invoice-dashboard-49.preview.emergentagent.com"
+            "origin_url": "https://stripe-invoice-test.preview.emergentagent.com"
         }
 
         success, data = self.make_request('POST', '/payments/stripe/create-checkout', checkout_data)

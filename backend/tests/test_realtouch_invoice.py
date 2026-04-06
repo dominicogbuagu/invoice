@@ -7,7 +7,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://invoice-dashboard-49.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://stripe-invoice-test.preview.emergentagent.com')
 
 class TestHealthAndBasics:
     """Basic health and API availability tests"""
@@ -242,7 +242,7 @@ class TestAuthenticatedEndpoints:
             f"{BASE_URL}/api/payments/stripe/create-checkout",
             json={
                 "plan": "professional",
-                "origin_url": "https://invoice-dashboard-49.preview.emergentagent.com",
+                "origin_url": "https://stripe-invoice-test.preview.emergentagent.com",
                 "payment_method": "bacs_debit"
             }
         )
@@ -268,7 +268,7 @@ class TestAuthenticatedEndpoints:
             f"{BASE_URL}/api/payments/stripe/create-checkout",
             json={
                 "plan": "professional",
-                "origin_url": "https://invoice-dashboard-49.preview.emergentagent.com",
+                "origin_url": "https://stripe-invoice-test.preview.emergentagent.com",
                 "payment_method": "card"
             }
         )

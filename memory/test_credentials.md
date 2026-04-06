@@ -8,10 +8,10 @@
 ## Google OAuth
 - Uses custom Google OAuth (Client ID: 142683158913-...)
 - Domain for Origins: https://www.invoice.realtouch.com
-- Preview Origins: https://invoice-dashboard-49.preview.emergentagent.com
+- Preview Origins: https://stripe-invoice-test.preview.emergentagent.com
 
 ## Backend API
-- Base URL: https://invoice-dashboard-49.preview.emergentagent.com
+- Base URL: https://stripe-invoice-test.preview.emergentagent.com
 - Auth: Bearer token via `Authorization: Bearer <session_token>` header
 - Admin endpoints require owner account
 

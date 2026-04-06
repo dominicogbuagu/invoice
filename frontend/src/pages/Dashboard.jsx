@@ -30,6 +30,7 @@ import CustomerManager from "@/components/CustomerManager";
 import UpgradeModal from "@/components/UpgradeModal";
 import SettingsPage from "@/components/SettingsPage";
 import DashboardHome from "@/components/DashboardHome";
+import PdfPreviewModal from "@/components/PdfPreviewModal";
 import { xhrGet, xhrPost, xhrDelete, xhrGetBlob, BACKEND_URL } from "@/lib/xhr";
 
 const DOCUMENT_TYPES = [
@@ -61,6 +62,7 @@ export default function Dashboard({ user, setUser }) {
   const [showEmailModal, setShowEmailModal] = useState(null);
   const [emailData, setEmailData] = useState({ recipient_email: "", subject: "", message: "" });
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [previewInvoice, setPreviewInvoice] = useState(null);
 
   // Fetch data
   useEffect(() => {
@@ -612,10 +614,10 @@ export default function Dashboard({ user, setUser }) {
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-end gap-2">
                               <button
-                                onClick={() => setViewingInvoice(invoice)}
+                                onClick={() => setPreviewInvoice(invoice)}
                                 className="p-2 text-slate-400 hover:text-[#0066cc] transition-colors"
-                                title="View"
-                                data-testid={`view-invoice-${invoice.invoice_id}`}
+                                title="Preview PDF"
+                                data-testid={`preview-invoice-${invoice.invoice_id}`}
                               >
                                 <Eye size={18} />
                               </button>
@@ -768,6 +770,16 @@ export default function Dashboard({ user, setUser }) {
               <Button variant="outline" onClick={() => setViewingInvoice(null)}>
                 Close
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPreviewInvoice(viewingInvoice);
+                  setViewingInvoice(null);
+                }}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Preview PDF
+              </Button>
               <Button 
                 onClick={() => handleDownload(viewingInvoice)}
                 className="bg-[#0066cc] hover:bg-[#0052a3] text-white"
@@ -874,6 +886,17 @@ export default function Dashboard({ user, setUser }) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* PDF Preview Modal */}
+      {previewInvoice && (
+        <PdfPreviewModal
+          invoice={previewInvoice}
+          onClose={() => setPreviewInvoice(null)}
+          onDownload={handleDownload}
+          user={user}
+          stats={stats}
+        />
       )}
 
       {/* Upgrade Modal */}
