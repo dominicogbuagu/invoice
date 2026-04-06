@@ -9,7 +9,7 @@ Build a full-stack SaaS invoicing platform called "Realtouch Invoice" with landi
 - **Database**: MongoDB
 - **Auth**: Custom JWT (Email/Password) + Custom Google OAuth
 - **PDF Generation**: ReportLab (5 color templates)
-- **Payments**: Stripe (card, BACS Direct Debit, Google Pay)
+- **Payments**: Stripe (card, BACS Direct Debit, Google Pay) - Real test keys integrated
 - **Emails**: Resend API
 - **Domain**: https://www.invoice.realtouch.com
 
@@ -28,28 +28,24 @@ Build a full-stack SaaS invoicing platform called "Realtouch Invoice" with landi
 - [x] PDF generation with user logos & template colors (5 themes)
 - [x] 5-download permanent limit for free users
 - [x] Owner bypass (rgvlimited@gmail.com)
-- [x] Stripe checkout (card, BACS Direct Debit, Google Pay)
+- [x] Stripe checkout (card, BACS Direct Debit, Google Pay) - Real test keys
 - [x] PDF Template Customization in Settings
 - [x] Recurring invoice processing endpoint
 - [x] Settings page with logo upload, company details, template selector
 - [x] Email invoices via Resend
 - [x] Payment success page
-- [x] **Admin Management Portal** (/admin route):
-  - System Overview (users, invoices, revenue, downloads, plan distribution)
-  - User Management (view, search, upgrade/downgrade plans, enable/disable, delete)
-  - Payment Transactions list
-  - Feature Controls (toggle features, set download limits, manage pricing)
-  - PDF Template Management (add/edit/delete templates)
-  - Maintenance Mode toggle
+- [x] Admin Management Portal (/admin route)
 - [x] Removed Production Deployment Guide from public Settings page
 - [x] New users get blank company details (not Realtouch)
 - [x] All API calls use XMLHttpRequest (bypass Emergent script)
+- [x] **PDF Preview before Download** (Modal + Open in New Tab, does NOT consume download quota)
+- [x] **Stripe real test keys integrated** (card, BACS Direct Debit, Google Pay all working)
 
 ## Upcoming Tasks (P1)
 - [ ] Recurring Invoices management UI
 - [ ] Background cron for auto-generating recurring invoices
-- [ ] PDF preview before download
 - [ ] PayPal integration
+- [ ] GitHub Sync
 
 ## Future Tasks (P2)
 - [ ] Multi-user access for Enterprise
@@ -71,6 +67,7 @@ Build a full-stack SaaS invoicing platform called "Realtouch Invoice" with landi
 
 ### Business
 - CRUD /api/invoices, /api/customers
-- GET /api/invoices/{id}/download
+- GET /api/invoices/{id}/preview (PDF preview - no download count)
+- GET /api/invoices/{id}/download (PDF download - counts for free users)
 - POST /api/payments/stripe/create-checkout
 - GET /api/pdf-templates, PUT /api/user/pdf-template

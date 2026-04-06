@@ -18,3 +18,8 @@
 ## Admin Portal
 - URL: /admin (owner-only access)
 - Features: Overview, Users, Transactions, Feature Controls, PDF Templates
+
+## Stripe
+- Publishable Key: pk_test_51Sgsqa4GoxwhVGQ6OJnzVeqYKGfgeGTAGbgXk3LhgN6H9OldqLtIwBFc6j3Etj1zgmyZ2CCpP4cI1PQepGO8JMBr00tfKQgOVf
+- Secret Key: sk_test_51Sgsqa4GoxwhVGQ6... (stored in backend/.env)
+- Payment methods: Card, BACS Direct Debit, Google Pay
