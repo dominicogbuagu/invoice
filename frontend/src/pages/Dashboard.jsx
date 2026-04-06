@@ -770,16 +770,6 @@ export default function Dashboard({ user, setUser }) {
               <Button variant="outline" onClick={() => setViewingInvoice(null)}>
                 Close
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setPreviewInvoice(viewingInvoice);
-                  setViewingInvoice(null);
-                }}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Preview PDF
-              </Button>
               <Button 
                 onClick={() => handleDownload(viewingInvoice)}
                 className="bg-[#0066cc] hover:bg-[#0052a3] text-white"
