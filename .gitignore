@@ -15,6 +15,8 @@ node_modules/
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+frontend/node_modules/
+frontend/node_modules/.cache/
 
 # Testing
 /coverage
@@ -27,11 +29,16 @@ next-env.d.ts
 
 # Production builds
 /build
+build/
+frontend/build/
 dist/
-dist
 
-# Environment files (comprehensive coverage)
-
+# Environment files
+*.env
+*.env.*
+.env
+backend/.env
+frontend/.env
 *token.json*
 *credentials.json*
 
@@ -48,7 +55,7 @@ dump.rdb
 
 # Python
 __pycache__/
-*pyc*
+*.pyc
 venv/
 .venv/
 
@@ -60,6 +67,7 @@ chainlit.md
 
 # Deployment
 .vercel
+.vercel/
 
 # Data and databases
 agenthub/agents/youtube/db
@@ -77,26 +85,4 @@ agenthub/agents/youtube/db
 .cache/
 
 # Mobile development
-android-sdk/ -e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/0.pack
-node_modules/
-frontend/node_modules/
-frontend/node_modules/.cache/
-.env
-backend/.env
-frontend/.env
+android-sdk/
